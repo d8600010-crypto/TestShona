@@ -1,593 +1,958 @@
-import { useState, useEffect, useRef } from "react";
-import { Volume2, Upload, Trophy, HelpCircle, X, Mic, AlertTriangle, CheckCircle2 } from "lucide-react";
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>單字卡練習</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-const App = () => {
-  const [originalCards, setOriginalCards] = useState([]);
-  const [queue, setQueue] = useState([]);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [stats, setStats] = useState({ again: 0, hard: 0, good: 0, easy: 0 });
-  const [isFinished, setIsFinished] = useState(false);
-  const [isAutoSpeechReady, setIsAutoSpeechReady] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [score, setScore] = useState(null);
-  const [isSemanticError, setIsSemanticError] = useState(false);
-  const [diffResults, setDiffResults] = useState([]);
-  const [feedback, setFeedback] = useState("");
-  const fileInputRef = useRef(null);
+  :root {
+    --bg: #f5f3ef;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: #e2ddd6;
+    --text: #1a1816;
+    --text2: #6b6560;
+    --text3: #a09a93;
+    --indigo: #3d35c4;
+    --indigo-light: #ebe9fb;
+    --indigo-text: #2b24a0;
+    --green: #1a7a4a;
+    --green-light: #e4f4ec;
+    --amber: #9a5a00;
+    --amber-light: #fdf0d8;
+    --red: #c0392b;
+    --red-light: #fdecea;
+    --radius: 20px;
+    --radius-sm: 12px;
+    --radius-xs: 8px;
+  }
 
-  const speak = (text) => {
-    if (!text) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
-  };
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 40px;
+  }
 
-  const calculateLevenshtein = (src, tgt) => {
-    const res = Array.from({ length: src.length + 1 }, () =>
-      Array(tgt.length + 1).fill(0)
-    );
-    for (let i = 0; i <= src.length; i++) res[i][0] = i;
-    for (let j = 0; j <= tgt.length; j++) res[0][j] = j;
-    for (let i = 1; i <= src.length; i++) {
-      for (let j = 1; j <= tgt.length; j++) {
-        if (src[i - 1] === tgt[j - 1]) res[i][j] = res[i - 1][j - 1];
-        else
-          res[i][j] =
-            Math.min(res[i - 1][j], res[i][j - 1], res[i - 1][j - 1]) + 1;
-      }
-    }
-    return res[src.length][tgt.length];
-  };
+  /* ── Header ── */
+  .header {
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    margin-bottom: 10px;
+  }
 
-  const computeScoreAndDiff = (originalSentence, userTranscript) => {
-    const negationWords = new Set([
-      "not","no","never","none","neither","nor","hardly","seldom",
-      "don't","doesn't","didn't","can't","couldn't","won't","wouldn't",
-      "isn't","aren't","wasn't","weren't","hasn't","haven't","hadn't","shouldn't",
-    ]);
-    const clean = (text) =>
-      text.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").trim().split(/\s+/);
-    const targetWords = clean(originalSentence);
-    const userWords = clean(userTranscript);
+  .header-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--indigo);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-xs);
+    transition: background .15s;
+  }
+  .header-btn:hover { background: var(--indigo-light); }
 
-    if (userWords.length === 0 || (userWords.length === 1 && userWords[0] === "")) {
-      setDiffResults([]);
-      setFeedback("尚未偵測到語音");
-      return 0;
-    }
+  .header-stats {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+  }
+  .stat-progress { color: var(--indigo); font-weight: 700; }
+  .stat-again { color: var(--red); }
+  .stat-easy { color: var(--green); }
 
-    const standardPenalty = 10 / targetWords.length;
-    let totalPenalty = 0;
-    let minorErrors = 0;
-    let majorErrors = 0;
+  .progress-bar {
+    width: 100%;
+    max-width: 440px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--indigo);
+    border-radius: 99px;
+    transition: width .5s ease;
+  }
 
-    const targetNegations = targetWords.filter((w) => negationWords.has(w));
-    const userNegations = userWords.filter((w) => negationWords.has(w));
-    let semanticInversion =
-      targetNegations.length !== userNegations.length ||
-      !targetNegations.every((val, index) => val === userNegations[index]);
+  /* ── Empty state ── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-top: 60px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .empty-icon {
+    width: 88px;
+    height: 88px;
+    border-radius: 24px;
+    background: var(--surface);
+    border: 2px dashed var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s, border-color .2s;
+  }
+  .empty-state:hover .empty-icon {
+    background: var(--indigo-light);
+    border-color: var(--indigo);
+  }
+  .empty-title { font-size: 17px; font-weight: 600; }
+  .empty-sub { font-size: 13px; color: var(--text3); line-height: 1.5; }
 
-    const dp = Array.from({ length: targetWords.length + 1 }, () =>
-      Array(userWords.length + 1).fill(0)
-    );
-    for (let i = 0; i <= targetWords.length; i++) dp[i][0] = i;
-    for (let j = 0; j <= userWords.length; j++) dp[0][j] = j;
-    for (let i = 1; i <= targetWords.length; i++) {
-      for (let j = 1; j <= userWords.length; j++) {
-        if (targetWords[i - 1] === userWords[j - 1]) dp[i][j] = dp[i - 1][j - 1];
-        else dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]) + 1;
-      }
-    }
+  /* ── Card ── */
+  .card-scene {
+    width: 100%;
+    max-width: 440px;
+    perspective: 1200px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .card-inner {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform .45s cubic-bezier(.4,0,.2,1);
+  }
+  .card-inner.flipped { transform: rotateY(180deg); }
 
-    let i = targetWords.length;
-    let j = userWords.length;
-    let diffs = [];
-    while (i > 0 || j > 0) {
-      if (i > 0 && j > 0 && targetWords[i - 1] === userWords[j - 1]) {
-        diffs.unshift({ word: userWords[j - 1], type: "correct" });
-        i--; j--;
-      } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
-        const wordDist = calculateLevenshtein(targetWords[i - 1], userWords[j - 1]);
-        const deviationRatio = wordDist / targetWords[i - 1].length;
-        if (deviationRatio <= 0.3) {
-          totalPenalty += standardPenalty * 0.5;
-          minorErrors++;
-          diffs.unshift({ word: userWords[j - 1], type: "minor" });
-        } else {
-          totalPenalty += standardPenalty;
-          majorErrors++;
-          diffs.unshift({ word: userWords[j - 1], type: "major" });
-        }
-        i--; j--;
-      } else if (i > 0 && (j === 0 || dp[i][j] === dp[i - 1][j] + 1)) {
-        totalPenalty += standardPenalty;
-        majorErrors++;
-        i--;
-      } else {
-        totalPenalty += standardPenalty;
-        majorErrors++;
-        diffs.unshift({ word: userWords[j - 1], type: "major" });
-        j--;
-      }
-    }
+  .card-face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 24px 24px;
+  }
+  .card-front {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 340px;
+  }
+  .card-back {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+    overflow-y: auto;
+  }
 
-    setDiffResults(diffs);
+  /* Front content */
+  .word-display {
+    font-family: 'DM Serif Display', serif;
+    font-size: 52px;
+    letter-spacing: -.5px;
+    text-align: center;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+  .speak-btn {
+    background: var(--indigo-light);
+    border: none;
+    border-radius: var(--radius-xs);
+    padding: 10px 14px;
+    color: var(--indigo-text);
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+    display: flex;
+    align-items: center;
+  }
+  .speak-btn:hover { background: #d8d4f7; }
+  .speak-btn:active { transform: scale(.96); }
 
-    if (semanticInversion) {
-      totalPenalty += 3.5;
-      setIsSemanticError(true);
-      setFeedback("嚴重失誤：漏唸或多唸了否定詞！");
-    } else {
-      setIsSemanticError(false);
-      const scoreValue = Math.max(0, 10 - totalPenalty);
-      if (scoreValue >= 10) setFeedback("Perfect! 發音非常清晰");
-      else if (scoreValue >= 8) setFeedback("太棒了！僅有微小偏差");
-      else if (minorErrors > 0 && majorErrors === 0) setFeedback("發音有小瑕疵");
-      else if (scoreValue >= 5) setFeedback("還行，有些唸法需調整");
-      else setFeedback("重大字彙偏離");
-    }
-    return parseFloat(Math.max(0, 10 - totalPenalty).toFixed(1));
-  };
+  .flip-hint {
+    margin-top: 32px;
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: .02em;
+  }
 
-  const startListening = (e) => {
-    e.stopPropagation();
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.onstart = () => {
-      setIsListening(true);
-      setTranscript("");
-      setScore(null);
-      setDiffResults([]);
-    };
-    recognition.onresult = (event) => {
-      const result = event.results[0][0].transcript;
-      setTranscript(result);
-      const calculatedScore = computeScoreAndDiff(queue[0].example, result);
-      setScore(calculatedScore);
-    };
-    recognition.onend = () => setIsListening(false);
-    recognition.start();
-  };
+  /* Back content */
+  .back-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .back-word {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+  }
+  .pos-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: var(--radius-xs);
+    background: var(--indigo-light);
+    color: var(--indigo-text);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      const lines = text.split(/\r?\n/);
-      const parsedCards = [];
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        const matches = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-        if (matches) {
-          const cleanArr = matches.map((m) => m.replace(/^"|"$/g, ""));
-          parsedCards.push({
-            id: Math.random().toString(36).substr(2, 9),
-            word: cleanArr[0],
-            pos: cleanArr[1],
-            meaning: cleanArr[2],
-            variations: cleanArr[3],
-            collocations: cleanArr[4],
-            example: cleanArr[5],
-            exampleTranslation: cleanArr[6],
-          });
-        }
-      }
-      setOriginalCards(parsedCards);
-      setQueue([...parsedCards]);
-      setStats({ again: 0, hard: 0, good: 0, easy: 0 });
-      setIsFinished(false);
-      setIsFlipped(false);
-      setIsAutoSpeechReady(true);
-    };
-    reader.readAsText(file);
-  };
+  .meaning {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
 
-  const handleSRS = (type) => {
-    if (queue.length === 0) return;
-    const newQueue = [...queue];
-    const currentCard = newQueue.shift();
-    setStats((prev) => ({ ...prev, [type]: prev[type] + 1 }));
-    if (type === "again") newQueue.splice(1, 0, currentCard);
-    else if (type === "hard") newQueue.splice(Math.floor(newQueue.length / 2), 0, currentCard);
-    else if (type === "good") newQueue.push(currentCard);
-    if (newQueue.length === 0) setIsFinished(true);
-    else {
-      setQueue(newQueue);
-      setIsFlipped(false);
-      setTranscript("");
-      setScore(null);
-      setDiffResults([]);
-      setFeedback("");
-    }
-  };
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: var(--radius-xs);
+  }
+  .tag-v { background: var(--amber-light); color: var(--amber); }
+  .tag-c { background: var(--green-light); color: var(--green); }
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (isFinished || originalCards.length === 0 || showInfo || isListening) return;
-      if (e.code === "Space") {
-        e.preventDefault();
-        setIsFlipped((prev) => !prev);
-      }
-      if (isFlipped) {
-        if (e.key === "1") handleSRS("again");
-        if (e.key === "2") handleSRS("hard");
-        if (e.key === "3") handleSRS("good");
-        if (e.key === "4") handleSRS("easy");
-      }
-      if (e.key === "Enter") speak(isFlipped ? queue[0]?.example : queue[0]?.word);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [queue, isFlipped, isFinished, originalCards, showInfo, isListening]);
+  .example-box {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .example-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .example-label-text {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  .example-speak-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 8px;
+    color: var(--indigo-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background .15s;
+  }
+  .example-speak-btn:hover { background: var(--indigo-light); }
 
-  useEffect(() => {
-    if (queue.length > 0 && !isFlipped && !isFinished) speak(queue[0].word);
-  }, [queue[0]?.id, isFlipped]);
+  .example-text {
+    font-size: 14px;
+    font-style: italic;
+    line-height: 1.6;
+    color: var(--text);
+  }
 
-  useEffect(() => {
-    if (isFlipped && queue.length > 0 && isAutoSpeechReady && !isFinished)
-      speak(queue[0].example);
-  }, [isFlipped]);
+  .translation {
+    font-size: 12px;
+    color: var(--text3);
+    font-style: italic;
+    margin-bottom: 12px;
+    padding: 0 2px;
+    line-height: 1.5;
+  }
 
-  const progress =
-    originalCards.length > 0
-      ? ((originalCards.length - queue.length) / originalCards.length) * 100
-      : 0;
+  /* Speech result */
+  .result-box {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .result-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  .score-badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: var(--radius-xs);
+  }
+  .score-good { background: var(--green-light); color: var(--green); }
+  .score-bad { background: var(--red-light); color: var(--red); }
 
-  const card = queue[0];
+  .diff-words {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .diff-correct { color: var(--green); font-weight: 600; font-size: 13px; }
+  .diff-minor { color: var(--amber); font-weight: 600; font-size: 13px; text-decoration: underline dashed; }
+  .diff-major { color: var(--red); font-weight: 600; font-size: 13px; text-decoration: underline wavy; }
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-start p-3 pt-4"
-      style={{ background: "var(--color-background-tertiary)" }}>
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileUpload}
-        accept=".csv"
-        className="hidden"
-      />
+  .feedback-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .feedback-ok { color: var(--text2); }
+  .feedback-err { color: var(--red); font-weight: 600; }
 
-      {/* Header */}
-      <div className="w-full max-w-md mb-3">
-        <div className="flex items-center justify-between rounded-2xl px-4 py-2.5"
-          style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)" }}>
-          <button
-            onClick={() => fileInputRef.current.click()}
-            className="flex items-center gap-1.5 rounded-xl px-2 py-1 text-sm font-semibold transition-colors"
-            style={{ color: "var(--color-text-info)" }}
-          >
-            <Upload size={15} />
-            上傳 CSV
-          </button>
-          <div className="flex items-center gap-3 text-xs font-medium"
-            style={{ color: "var(--color-text-secondary)" }}>
-            <span style={{ color: "var(--color-text-info)", fontWeight: 600 }}>
-              {originalCards.length - queue.length} / {originalCards.length}
-            </span>
-            <span style={{ color: "var(--color-text-danger)" }}>A:{stats.again}</span>
-            <span style={{ color: "var(--color-text-success)" }}>E:{stats.easy}</span>
-          </div>
-          <button
-            onClick={() => setShowInfo(true)}
-            className="p-1.5 rounded-xl transition-colors"
-            style={{ color: "var(--color-text-tertiary)" }}
-          >
-            <HelpCircle size={16} />
+  /* Mic button */
+  .mic-btn {
+    width: 100%;
+    padding: 11px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: background .15s, transform .1s;
+  }
+  .mic-btn:active { transform: scale(.98); }
+  .mic-btn.idle { background: var(--indigo); color: #fff; }
+  .mic-btn.idle:hover { background: var(--indigo-text); }
+  .mic-btn.listening {
+    background: var(--red-light);
+    color: var(--red);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+  /* SRS buttons */
+  .srs-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .srs-btn {
+    padding: 10px 4px 8px;
+    border-radius: var(--radius-xs);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter .15s, transform .1s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    letter-spacing: .02em;
+  }
+  .srs-btn:active { transform: scale(.95); }
+  .srs-btn .kbd {
+    font-size: 9px;
+    opacity: .55;
+    font-weight: 500;
+  }
+  .srs-again { background: var(--red-light); color: var(--red); }
+  .srs-hard { background: var(--amber-light); color: var(--amber); }
+  .srs-good { background: var(--green-light); color: var(--green); }
+  .srs-easy { background: var(--indigo-light); color: var(--indigo-text); }
+
+  /* Finished */
+  .finished {
+    width: 100%;
+    max-width: 440px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 36px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    margin-top: 16px;
+  }
+  .trophy { font-size: 48px; }
+  .finished-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+  }
+  .finished-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+  .finished-stat {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    text-align: center;
+  }
+  .finished-stat-label {
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 4px;
+    font-weight: 500;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .finished-stat-val {
+    font-family: 'DM Serif Display', serif;
+    font-size: 32px;
+  }
+  .restart-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .restart-btn:hover { background: #333; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+  }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    max-width: 340px;
+    width: 100%;
+    border: 1px solid var(--border);
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .modal-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text3);
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: background .15s;
+  }
+  .modal-close:hover { background: var(--surface2); }
+
+  .modal-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+  .modal-kbd-box {
+    background: var(--surface2);
+    border-radius: var(--radius-xs);
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 16px;
+    line-height: 1.7;
+  }
+  .modal-kbd-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+  .modal-ok-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius-xs);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .modal-ok-btn:hover { background: #333; }
+
+  /* SVG icons */
+  svg { display: block; }
+</style>
+</head>
+<body>
+
+<input type="file" id="file-input" accept=".csv" style="display:none">
+
+<!-- Header -->
+<div class="header">
+  <button class="header-btn" onclick="document.getElementById('file-input').click()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    上傳 CSV
+  </button>
+  <div class="header-stats">
+    <span class="stat-progress" id="stat-progress">0 / 0</span>
+    <span class="stat-again" id="stat-again">A:0</span>
+    <span class="stat-easy" id="stat-easy">E:0</span>
+  </div>
+  <button class="header-btn" onclick="showModal()" style="color:var(--text3)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+  </button>
+</div>
+
+<div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+<!-- Empty state -->
+<div class="empty-state" id="empty-state" onclick="document.getElementById('file-input').click()">
+  <div class="empty-icon">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  </div>
+  <p class="empty-title">點擊上傳 CSV 檔案</p>
+  <p class="empty-sub">word, pos, meaning, variations,<br>collocations, example, translation</p>
+</div>
+
+<!-- Flashcard -->
+<div class="card-scene" id="card-scene" style="display:none" onclick="flipCard()">
+  <div class="card-inner" id="card-inner">
+
+    <!-- Front -->
+    <div class="card-face card-front">
+      <div class="word-display" id="front-word">—</div>
+      <button class="speak-btn" onclick="event.stopPropagation(); speakText(currentCard().word)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      </button>
+      <p class="flip-hint">點擊翻面 / Space</p>
+    </div>
+
+    <!-- Back -->
+    <div class="card-face card-back" id="card-back">
+      <div class="back-header">
+        <span class="back-word" id="back-word">—</span>
+        <span class="pos-badge" id="back-pos"></span>
+      </div>
+      <p class="meaning" id="back-meaning"></p>
+      <div class="tags" id="back-tags"></div>
+
+      <div class="example-box">
+        <div class="example-label">
+          <span class="example-label-text">Example</span>
+          <button class="example-speak-btn" onclick="event.stopPropagation(); speakText(currentCard().example)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           </button>
         </div>
-
-        {/* Progress bar */}
-        <div className="mt-2 h-1 rounded-full overflow-hidden"
-          style={{ background: "var(--color-border-tertiary)" }}>
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${progress}%`, background: "var(--color-text-info)" }}
-          />
-        </div>
+        <p class="example-text" id="back-example"></p>
       </div>
 
-      {/* Empty state */}
-      {originalCards.length === 0 && (
-        <div
-          onClick={() => fileInputRef.current.click()}
-          className="w-full max-w-md mt-16 flex flex-col items-center gap-4 cursor-pointer"
-        >
-          <div className="w-24 h-24 rounded-3xl flex items-center justify-center"
-            style={{ background: "var(--color-background-secondary)", border: "1.5px dashed var(--color-border-secondary)" }}>
-            <Upload size={32} style={{ color: "var(--color-text-tertiary)" }} />
-          </div>
-          <div className="text-center">
-            <p className="font-semibold text-lg" style={{ color: "var(--color-text-primary)" }}>點擊上傳 CSV 檔案</p>
-            <p className="text-sm mt-1" style={{ color: "var(--color-text-tertiary)" }}>
-              word, pos, meaning, variations, collocations, example, translation
-            </p>
-          </div>
+      <!-- Speech result -->
+      <div class="result-box" id="result-box" style="display:none">
+        <div class="result-header">
+          <span class="result-label">Results</span>
+          <span class="score-badge" id="score-badge"></span>
         </div>
-      )}
+        <div class="diff-words" id="diff-words"></div>
+        <div class="feedback-row" id="feedback-row"></div>
+      </div>
 
-      {/* Flashcard */}
-      {!isFinished && originalCards.length > 0 && (
-        <div
-          onClick={() => setIsFlipped(!isFlipped)}
-          className="w-full max-w-md cursor-pointer select-none"
-          style={{ perspective: "1000px" }}
-        >
-          <div
-            style={{
-              transformStyle: "preserve-3d",
-              transition: "transform 0.45s cubic-bezier(0.4,0,0.2,1)",
-              transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
-              position: "relative",
-              height: isFlipped ? "auto" : "380px",
-              minHeight: "380px",
-            }}
-          >
-            {/* FRONT */}
-            <div
-              style={{
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-                position: isFlipped ? "absolute" : "relative",
-                inset: 0,
-                background: "var(--color-background-primary)",
-                border: "0.5px solid var(--color-border-tertiary)",
-              }}
-              className="rounded-3xl flex flex-col items-center justify-center p-8"
-            >
-              <div className="text-5xl font-black tracking-tight text-center mb-3"
-                style={{ color: "var(--color-text-primary)" }}>
-                {card?.word}
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); speak(card?.word); }}
-                className="mt-2 p-3 rounded-2xl transition-colors"
-                style={{ background: "var(--color-background-secondary)", color: "var(--color-text-info)" }}
-              >
-                <Volume2 size={22} />
-              </button>
-              <p className="mt-10 text-sm font-medium" style={{ color: "var(--color-text-tertiary)" }}>
-                點擊翻面 / Space
-              </p>
-            </div>
+      <!-- Translation (shown when no result) -->
+      <p class="translation" id="back-translation"></p>
 
-            {/* BACK */}
-            <div
-              style={{
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-                transform: "rotateY(180deg)",
-                position: isFlipped ? "relative" : "absolute",
-                inset: 0,
-                background: "var(--color-background-primary)",
-                border: "0.5px solid var(--color-border-tertiary)",
-              }}
-              className="rounded-3xl flex flex-col p-5"
-            >
-              {/* Word + POS */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl font-black" style={{ color: "var(--color-text-primary)" }}>
-                  {card?.word}
-                </span>
-                <span className="px-2 py-0.5 rounded-lg text-xs font-semibold"
-                  style={{ background: "var(--color-background-info)", color: "var(--color-text-info)" }}>
-                  {card?.pos}
-                </span>
-              </div>
+      <button class="mic-btn idle" id="mic-btn" onclick="event.stopPropagation(); startListening()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        開始發音測試
+      </button>
 
-              {/* Meaning */}
-              <p className="font-semibold text-base mb-3" style={{ color: "var(--color-text-primary)" }}>
-                {card?.meaning}
-              </p>
-
-              {/* Variations & Collocations */}
-              <div className="flex flex-wrap gap-2 mb-3">
-                {card?.variations && (
-                  <span className="text-xs px-2 py-0.5 rounded-lg font-medium"
-                    style={{ background: "var(--color-background-warning)", color: "var(--color-text-warning)" }}>
-                    V: {card.variations}
-                  </span>
-                )}
-                {card?.collocations && (
-                  <span className="text-xs px-2 py-0.5 rounded-lg font-medium"
-                    style={{ background: "var(--color-background-success)", color: "var(--color-text-success)" }}>
-                    C: {card.collocations}
-                  </span>
-                )}
-              </div>
-
-              {/* Example sentence */}
-              <div className="rounded-2xl p-3 mb-3"
-                style={{ background: "var(--color-background-secondary)" }}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wide"
-                    style={{ color: "var(--color-text-tertiary)" }}>Example</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); speak(card?.example); }}
-                    className="p-1.5 rounded-xl transition-colors"
-                    style={{ background: "var(--color-background-primary)", color: "var(--color-text-info)", border: "0.5px solid var(--color-border-tertiary)" }}
-                  >
-                    <Volume2 size={13} />
-                  </button>
-                </div>
-                <p className="text-sm leading-relaxed italic font-medium"
-                  style={{ color: "var(--color-text-primary)" }}>
-                  "{card?.example}"
-                </p>
-              </div>
-
-              {/* Speech result or translation */}
-              {transcript ? (
-                <div className="rounded-2xl p-3 mb-3"
-                  style={{ background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)" }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold uppercase tracking-wide"
-                      style={{ color: "var(--color-text-tertiary)" }}>Results</span>
-                    {score !== null && (
-                      <span className="text-xs font-black px-2 py-0.5 rounded-lg"
-                        style={{
-                          background: score >= 8 ? "var(--color-background-success)" : "var(--color-background-danger)",
-                          color: score >= 8 ? "var(--color-text-success)" : "var(--color-text-danger)",
-                        }}>
-                        {score} PTS
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {diffResults.map((item, idx) => (
-                      <span
-                        key={idx}
-                        className="text-sm font-semibold"
-                        style={{
-                          color: item.type === "correct"
-                            ? "var(--color-text-success)"
-                            : item.type === "minor"
-                            ? "var(--color-text-warning)"
-                            : "var(--color-text-danger)",
-                          textDecoration: item.type === "minor"
-                            ? "underline dashed"
-                            : item.type === "major"
-                            ? "underline wavy"
-                            : "none",
-                        }}
-                      >
-                        {item.word}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs"
-                    style={{ color: isSemanticError ? "var(--color-text-danger)" : "var(--color-text-secondary)" }}>
-                    {isSemanticError
-                      ? <AlertTriangle size={13} style={{ color: "var(--color-text-danger)" }} />
-                      : <CheckCircle2 size={13} style={{ color: "var(--color-text-success)" }} />}
-                    <span className={isSemanticError ? "font-semibold" : ""}>{feedback}</span>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs italic mb-3 px-1" style={{ color: "var(--color-text-tertiary)" }}>
-                  {card?.exampleTranslation}
-                </p>
-              )}
-
-              {/* Mic button */}
-              <button
-                onClick={startListening}
-                disabled={isListening}
-                className="w-full py-2.5 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 mb-3"
-                style={isListening
-                  ? { background: "var(--color-background-danger)", color: "var(--color-text-danger)", border: "0.5px solid var(--color-border-danger)" }
-                  : { background: "var(--color-text-info)", color: "#fff" }}
-              >
-                <Mic size={15} />
-                {isListening ? "聆聽中…" : "開始發音測試"}
-              </button>
-
-              {/* SRS buttons */}
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { type: "again", label: "再來", bg: "var(--color-background-danger)", fg: "var(--color-text-danger)" },
-                  { type: "hard", label: "困難", bg: "var(--color-background-warning)", fg: "var(--color-text-warning)" },
-                  { type: "good", label: "好的", bg: "var(--color-background-success)", fg: "var(--color-text-success)" },
-                  { type: "easy", label: "簡單", bg: "var(--color-background-info)", fg: "var(--color-text-info)" },
-                ].map((btn, idx) => (
-                  <button
-                    key={btn.type}
-                    onClick={(e) => { e.stopPropagation(); handleSRS(btn.type); }}
-                    className="py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wide transition-all active:scale-95"
-                    style={{ background: btn.bg, color: btn.fg }}
-                  >
-                    <span className="block text-[10px] opacity-60 mb-0.5">{idx + 1}</span>
-                    {btn.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Finished screen */}
-      {isFinished && (
-        <div className="w-full max-w-md rounded-3xl p-8 flex flex-col items-center gap-5 mt-4"
-          style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)" }}>
-          <Trophy size={44} style={{ color: "var(--color-text-warning)" }} />
-          <h2 className="text-2xl font-black" style={{ color: "var(--color-text-primary)" }}>練習完成！</h2>
-          <div className="grid grid-cols-2 gap-3 w-full text-sm">
-            {[
-              { label: "Again", value: stats.again, fg: "var(--color-text-danger)" },
-              { label: "Hard", value: stats.hard, fg: "var(--color-text-warning)" },
-              { label: "Good", value: stats.good, fg: "var(--color-text-success)" },
-              { label: "Easy", value: stats.easy, fg: "var(--color-text-info)" },
-            ].map((s) => (
-              <div key={s.label} className="rounded-2xl p-3 text-center"
-                style={{ background: "var(--color-background-secondary)" }}>
-                <p className="text-xs font-medium mb-1" style={{ color: "var(--color-text-tertiary)" }}>{s.label}</p>
-                <p className="text-2xl font-black" style={{ color: s.fg }}>{s.value}</p>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full py-3.5 rounded-2xl font-semibold transition-colors"
-            style={{ background: "var(--color-text-primary)", color: "var(--color-background-primary)" }}
-          >
-            重新開始
-          </button>
-        </div>
-      )}
-
-      {/* Info modal — fixed positioning avoided; use faux overlay */}
-      {showInfo && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-50 p-4"
-          style={{ background: "rgba(0,0,0,0.4)" }}
-          onClick={() => setShowInfo(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="rounded-3xl p-6 max-w-sm w-full"
-            style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)" }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold" style={{ color: "var(--color-text-primary)" }}>評分指南</h3>
-              <button onClick={() => setShowInfo(false)}
-                className="p-1.5 rounded-xl"
-                style={{ color: "var(--color-text-tertiary)" }}>
-                <X size={18} />
-              </button>
-            </div>
-            <ul className="space-y-2 text-sm leading-relaxed mb-5" style={{ color: "var(--color-text-secondary)" }}>
-              <li><span className="font-semibold" style={{ color: "var(--color-text-success)" }}>綠字</span>：發音準確。</li>
-              <li><span className="font-semibold" style={{ color: "var(--color-text-warning)" }}>橘字虛線</span>：發音輕微瑕疵。</li>
-              <li><span className="font-semibold" style={{ color: "var(--color-text-danger)" }}>紅字波浪線</span>：發音偏差或多唸。</li>
-              <li><span className="font-semibold" style={{ color: "var(--color-text-danger)" }}>語意反轉</span>：否定詞漏唸，扣 3.5 分。</li>
-            </ul>
-            <div className="rounded-xl p-3 mb-4 text-xs"
-              style={{ background: "var(--color-background-secondary)", color: "var(--color-text-secondary)" }}>
-              <p className="font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>鍵盤快捷鍵</p>
-              <p>Space — 翻面　Enter — 朗讀</p>
-              <p>1 / 2 / 3 / 4 — Again / Hard / Good / Easy</p>
-            </div>
-            <button
-              onClick={() => setShowInfo(false)}
-              className="w-full py-3 rounded-xl font-semibold text-sm transition-colors"
-              style={{ background: "var(--color-text-primary)", color: "var(--color-background-primary)" }}
-            >
-              我明白了
-            </button>
-          </div>
-        </div>
-      )}
+      <div class="srs-grid">
+        <button class="srs-btn srs-again" onclick="event.stopPropagation(); handleSRS('again')">
+          <span class="kbd">1</span>再來
+        </button>
+        <button class="srs-btn srs-hard" onclick="event.stopPropagation(); handleSRS('hard')">
+          <span class="kbd">2</span>困難
+        </button>
+        <button class="srs-btn srs-good" onclick="event.stopPropagation(); handleSRS('good')">
+          <span class="kbd">3</span>好的
+        </button>
+        <button class="srs-btn srs-easy" onclick="event.stopPropagation(); handleSRS('easy')">
+          <span class="kbd">4</span>簡單
+        </button>
+      </div>
     </div>
-  );
-};
+  </div>
+</div>
 
-export default App;
+<!-- Finished -->
+<div class="finished" id="finished-screen" style="display:none">
+  <div class="trophy">🏆</div>
+  <h2 class="finished-title">練習完成！</h2>
+  <div class="finished-grid">
+    <div class="finished-stat">
+      <div class="finished-stat-label">Again</div>
+      <div class="finished-stat-val" id="f-again" style="color:var(--red)">0</div>
+    </div>
+    <div class="finished-stat">
+      <div class="finished-stat-label">Hard</div>
+      <div class="finished-stat-val" id="f-hard" style="color:var(--amber)">0</div>
+    </div>
+    <div class="finished-stat">
+      <div class="finished-stat-label">Good</div>
+      <div class="finished-stat-val" id="f-good" style="color:var(--green)">0</div>
+    </div>
+    <div class="finished-stat">
+      <div class="finished-stat-label">Easy</div>
+      <div class="finished-stat-val" id="f-easy" style="color:var(--indigo)">0</div>
+    </div>
+  </div>
+  <button class="restart-btn" onclick="location.reload()">重新開始</button>
+</div>
+
+<!-- Info modal -->
+<div class="modal-overlay" id="modal-overlay" style="display:none" onclick="hideModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">評分指南</h3>
+      <button class="modal-close" onclick="hideModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <ul class="modal-list">
+      <li><span style="color:var(--green);font-weight:600">綠字</span>：發音準確。</li>
+      <li><span style="color:var(--amber);font-weight:600">橘字虛線</span>：發音輕微瑕疵。</li>
+      <li><span style="color:var(--red);font-weight:600">紅字波浪線</span>：發音偏差或多唸。</li>
+      <li><span style="color:var(--red);font-weight:600">語意反轉</span>：否定詞漏唸，扣 3.5 分。</li>
+    </ul>
+    <div class="modal-kbd-box">
+      <p class="modal-kbd-title">鍵盤快捷鍵</p>
+      <p>Space — 翻面　　Enter — 朗讀</p>
+      <p>1 / 2 / 3 / 4 — Again / Hard / Good / Easy</p>
+    </div>
+    <button class="modal-ok-btn" onclick="hideModal()">我明白了</button>
+  </div>
+</div>
+
+<script>
+  let originalCards = [];
+  let queue = [];
+  let isFlipped = false;
+  let isListening = false;
+  let stats = { again:0, hard:0, good:0, easy:0 };
+  let isFinished = false;
+
+  const currentCard = () => queue[0];
+
+  // ── File upload ──
+  document.getElementById('file-input').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const lines = ev.target.result.split(/\r?\n/);
+      const cards = [];
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const m = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+        if (m) {
+          const c = m.map(x => x.replace(/^"|"$/g, ''));
+          cards.push({ id: Math.random().toString(36).substr(2,9), word:c[0], pos:c[1], meaning:c[2], variations:c[3], collocations:c[4], example:c[5], exampleTranslation:c[6] });
+        }
+      }
+      originalCards = cards;
+      queue = [...cards];
+      stats = { again:0, hard:0, good:0, easy:0 };
+      isFinished = false;
+      isFlipped = false;
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('card-scene').style.display = 'block';
+      document.getElementById('finished-screen').style.display = 'none';
+      renderCard();
+      updateHeader();
+      speakText(currentCard().word);
+    };
+    reader.readAsText(file);
+  });
+
+  // ── Render ──
+  function renderCard() {
+    if (!currentCard()) return;
+    const c = currentCard();
+    document.getElementById('front-word').textContent = c.word;
+    document.getElementById('back-word').textContent = c.word;
+    document.getElementById('back-pos').textContent = c.pos || '';
+    document.getElementById('back-meaning').textContent = c.meaning || '';
+    document.getElementById('back-example').textContent = c.example ? `"${c.example}"` : '';
+    document.getElementById('back-translation').textContent = c.exampleTranslation || '';
+
+    // Tags
+    const tagsEl = document.getElementById('back-tags');
+    tagsEl.innerHTML = '';
+    if (c.variations) tagsEl.innerHTML += `<span class="tag tag-v">V: ${c.variations}</span>`;
+    if (c.collocations) tagsEl.innerHTML += `<span class="tag tag-c">C: ${c.collocations}</span>`;
+
+    // Reset speech result
+    document.getElementById('result-box').style.display = 'none';
+    document.getElementById('back-translation').style.display = '';
+
+    // Reset flip
+    const inner = document.getElementById('card-inner');
+    inner.classList.remove('flipped');
+    isFlipped = false;
+
+    // Card back height: let front determine scene height
+    document.getElementById('card-scene').style.height = '';
+  }
+
+  function updateHeader() {
+    const done = originalCards.length - queue.length;
+    document.getElementById('stat-progress').textContent = `${done} / ${originalCards.length}`;
+    document.getElementById('stat-again').textContent = `A:${stats.again}`;
+    document.getElementById('stat-easy').textContent = `E:${stats.easy}`;
+    const pct = originalCards.length > 0 ? (done / originalCards.length) * 100 : 0;
+    document.getElementById('progress-fill').style.width = pct + '%';
+  }
+
+  // ── Flip ──
+  function flipCard() {
+    if (isFinished || originalCards.length === 0) return;
+    isFlipped = !isFlipped;
+    document.getElementById('card-inner').classList.toggle('flipped', isFlipped);
+
+    // Fix: make card-scene match back height after flip
+    if (isFlipped) {
+      const back = document.getElementById('card-back');
+      // Let it render then sync height
+      setTimeout(() => {
+        document.getElementById('card-scene').style.height = back.scrollHeight + 'px';
+        document.getElementById('card-inner').style.height = back.scrollHeight + 'px';
+      }, 10);
+      speakText(currentCard().example);
+    } else {
+      document.getElementById('card-scene').style.height = '';
+      document.getElementById('card-inner').style.height = '';
+      speakText(currentCard().word);
+    }
+  }
+
+  // ── SRS ──
+  function handleSRS(type) {
+    if (queue.length === 0) return;
+    const newQueue = [...queue];
+    const card = newQueue.shift();
+    stats[type]++;
+    if (type === 'again') newQueue.splice(1, 0, card);
+    else if (type === 'hard') newQueue.splice(Math.floor(newQueue.length / 2), 0, card);
+    else if (type === 'good') newQueue.push(card);
+    if (newQueue.length === 0) {
+      isFinished = true;
+      showFinished();
+    } else {
+      queue = newQueue;
+      renderCard();
+      updateHeader();
+      speakText(currentCard().word);
+    }
+  }
+
+  function showFinished() {
+    document.getElementById('card-scene').style.display = 'none';
+    document.getElementById('finished-screen').style.display = 'flex';
+    document.getElementById('f-again').textContent = stats.again;
+    document.getElementById('f-hard').textContent = stats.hard;
+    document.getElementById('f-good').textContent = stats.good;
+    document.getElementById('f-easy').textContent = stats.easy;
+  }
+
+  // ── Speech synthesis ──
+  function speakText(text) {
+    if (!text) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 0.9;
+    window.speechSynthesis.speak(u);
+  }
+
+  // ── Levenshtein ──
+  function lev(a, b) {
+    const r = Array.from({length:a.length+1}, () => Array(b.length+1).fill(0));
+    for (let i=0;i<=a.length;i++) r[i][0]=i;
+    for (let j=0;j<=b.length;j++) r[0][j]=j;
+    for (let i=1;i<=a.length;i++) for (let j=1;j<=b.length;j++) {
+      r[i][j] = a[i-1]===b[j-1] ? r[i-1][j-1] : Math.min(r[i-1][j],r[i][j-1],r[i-1][j-1])+1;
+    }
+    return r[a.length][b.length];
+  }
+
+  // ── Score & diff ──
+  function computeScoreAndDiff(original, transcript) {
+    const neg = new Set(['not','no','never','none','neither','nor','hardly','seldom',
+      "don't","doesn't","didn't","can't","couldn't","won't","wouldn't",
+      "isn't","aren't","wasn't","weren't","hasn't","haven't","hadn't","shouldn't"]);
+    const clean = t => t.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,'').trim().split(/\s+/);
+    const tw = clean(original), uw = clean(transcript);
+    if (!uw.length || (uw.length===1 && !uw[0])) return { score:0, diffs:[], feedback:'尚未偵測到語音', semantic:false };
+
+    const sp = 10/tw.length;
+    let pen=0, minor=0, major=0;
+    const tNeg = tw.filter(w=>neg.has(w)), uNeg = uw.filter(w=>neg.has(w));
+    const semantic = tNeg.length!==uNeg.length || !tNeg.every((v,i)=>v===uNeg[i]);
+
+    const dp = Array.from({length:tw.length+1}, ()=>Array(uw.length+1).fill(0));
+    for (let i=0;i<=tw.length;i++) dp[i][0]=i;
+    for (let j=0;j<=uw.length;j++) dp[0][j]=j;
+    for (let i=1;i<=tw.length;i++) for (let j=1;j<=uw.length;j++) {
+      dp[i][j] = tw[i-1]===uw[j-1] ? dp[i-1][j-1] : Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1])+1;
+    }
+
+    let i=tw.length, j=uw.length, diffs=[];
+    while (i>0||j>0) {
+      if (i>0&&j>0&&tw[i-1]===uw[j-1]) { diffs.unshift({word:uw[j-1],type:'correct'}); i--;j--; }
+      else if (i>0&&j>0&&dp[i][j]===dp[i-1][j-1]+1) {
+        const d=lev(tw[i-1],uw[j-1]), r=d/tw[i-1].length;
+        if (r<=0.3) { pen+=sp*.5;minor++;diffs.unshift({word:uw[j-1],type:'minor'}); }
+        else { pen+=sp;major++;diffs.unshift({word:uw[j-1],type:'major'}); }
+        i--;j--;
+      } else if (i>0&&(j===0||dp[i][j]===dp[i-1][j]+1)) { pen+=sp;major++;i--; }
+      else { pen+=sp;major++;diffs.unshift({word:uw[j-1],type:'major'});j--; }
+    }
+
+    let fb='', finalPen=pen;
+    if (semantic) { finalPen+=3.5; fb='嚴重失誤：漏唸或多唸了否定詞！'; }
+    else {
+      const s=Math.max(0,10-pen);
+      if (s>=10) fb='Perfect! 發音非常清晰';
+      else if (s>=8) fb='太棒了！僅有微小偏差';
+      else if (minor>0&&major===0) fb='發音有小瑕疵';
+      else if (s>=5) fb='還行，有些唸法需調整';
+      else fb='重大字彙偏離';
+    }
+    return { score:parseFloat(Math.max(0,10-finalPen).toFixed(1)), diffs, feedback:fb, semantic };
+  }
+
+  // ── Speech recognition ──
+  function startListening() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert('您的瀏覽器不支援語音辨識'); return; }
+    const rec = new SR();
+    rec.lang='en-US'; rec.interimResults=false;
+    rec.onstart = () => {
+      isListening=true;
+      const btn=document.getElementById('mic-btn');
+      btn.className='mic-btn listening';
+      btn.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> 聆聽中…';
+    };
+    rec.onresult = ev => {
+      const t = ev.results[0][0].transcript;
+      const { score, diffs, feedback, semantic } = computeScoreAndDiff(currentCard().example, t);
+      showResult(score, diffs, feedback, semantic);
+    };
+    rec.onend = () => {
+      isListening=false;
+      const btn=document.getElementById('mic-btn');
+      btn.className='mic-btn idle';
+      btn.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> 開始發音測試';
+    };
+    rec.start();
+  }
+
+  function showResult(score, diffs, feedback, semantic) {
+    const box = document.getElementById('result-box');
+    box.style.display='block';
+    document.getElementById('back-translation').style.display='none';
+
+    const badge=document.getElementById('score-badge');
+    badge.textContent=score+' PTS';
+    badge.className='score-badge '+(score>=8?'score-good':'score-bad');
+
+    const diffEl=document.getElementById('diff-words');
+    diffEl.innerHTML=diffs.map(d=>`<span class="diff-${d.type}">${d.word}</span>`).join('');
+
+    const fbEl=document.getElementById('feedback-row');
+    const icon = semantic
+      ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+      : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+    fbEl.innerHTML=`${icon}<span class="${semantic?'feedback-err':'feedback-ok'}">${feedback}</span>`;
+
+    // Re-sync height
+    setTimeout(()=>{
+      const back=document.getElementById('card-back');
+      document.getElementById('card-scene').style.height=back.scrollHeight+'px';
+      document.getElementById('card-inner').style.height=back.scrollHeight+'px';
+    },10);
+  }
+
+  // ── Modal ──
+  function showModal() { document.getElementById('modal-overlay').style.display='flex'; }
+  function hideModal() { document.getElementById('modal-overlay').style.display='none'; }
+
+  // ── Keyboard ──
+  document.addEventListener('keydown', e => {
+    if (isFinished||originalCards.length===0||document.getElementById('modal-overlay').style.display!=='none'||isListening) return;
+    if (e.code==='Space') { e.preventDefault(); flipCard(); }
+    if (isFlipped) {
+      if (e.key==='1') handleSRS('again');
+      if (e.key==='2') handleSRS('hard');
+      if (e.key==='3') handleSRS('good');
+      if (e.key==='4') handleSRS('easy');
+    }
+    if (e.key==='Enter') speakText(isFlipped ? currentCard()?.example : currentCard()?.word);
+  });
+</script>
+</body>
+</html>
