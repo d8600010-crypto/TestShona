@@ -1,42 +1,43 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, Upload, RotateCcw, Trophy, BarChart3, ImageIcon, HelpCircle, X, Mic, Star, AlertTriangle, CheckCircle2, MessageCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import { Volume2, Upload, RotateCcw, Trophy, BarChart3, HelpCircle, X, Mic, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 const App = () => {
-  const [originalCards, setOriginalCards] = useState([]); 
-  const [queue, setQueue] = useState([]); 
+  const [originalCards, setOriginalCards] = useState([]);
+  const [queue, setQueue] = useState([]);
   const [isFlipped, setIsFlipped] = useState(false);
   const [stats, setStats] = useState({ again: 0, hard: 0, good: 0, easy: 0 });
   const [isFinished, setIsFinished] = useState(false);
   const [isAutoSpeechReady, setIsAutoSpeechReady] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
+  const [transcript, setTranscript] = useState("");
   const [score, setScore] = useState(null);
   const [isSemanticError, setIsSemanticError] = useState(false);
   const [diffResults, setDiffResults] = useState([]);
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState("");
   const fileInputRef = useRef(null);
-
-  const getImageUrl = (word) => `https://loremflickr.com/400/250/${encodeURIComponent(word)}?lock=${word.length}`;
 
   const speak = (text) => {
     if (!text) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
+    utterance.lang = "en-US";
     utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
   };
 
   const calculateLevenshtein = (src, tgt) => {
-    const res = Array.from({ length: src.length + 1 }, () => Array(tgt.length + 1).fill(0));
+    const res = Array.from({ length: src.length + 1 }, () =>
+      Array(tgt.length + 1).fill(0)
+    );
     for (let i = 0; i <= src.length; i++) res[i][0] = i;
     for (let j = 0; j <= tgt.length; j++) res[0][j] = j;
     for (let i = 1; i <= src.length; i++) {
       for (let j = 1; j <= tgt.length; j++) {
         if (src[i - 1] === tgt[j - 1]) res[i][j] = res[i - 1][j - 1];
-        else res[i][j] = Math.min(res[i - 1][j], res[i][j - 1], res[i - 1][j - 1]) + 1;
+        else
+          res[i][j] =
+            Math.min(res[i - 1][j], res[i][j - 1], res[i - 1][j - 1]) + 1;
       }
     }
     return res[src.length][tgt.length];
@@ -44,18 +45,22 @@ const App = () => {
 
   const computeScoreAndDiff = (originalSentence, userTranscript) => {
     const negationWords = new Set([
-      'not', 'no', 'never', 'none', 'neither', 'nor', 'hardly', 'seldom',
-      'don\'t', 'doesn\'t', 'didn\'t', 'can\'t', 'couldn\'t', 'won\'t', 'wouldn\'t',
-      'isn\'t', 'aren\'t', 'wasn\'t', 'weren\'t', 'hasn\'t', 'haven\'t', 'hadn\'t', 'shouldn\'t'
+      "not","no","never","none","neither","nor","hardly","seldom",
+      "don't","doesn't","didn't","can't","couldn't","won't","wouldn't",
+      "isn't","aren't","wasn't","weren't","hasn't","haven't","hadn't","shouldn't",
     ]);
-
-    const clean = (text) => text.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").trim().split(/\s+/);
+    const clean = (text) =>
+      text
+        .toLowerCase()
+        .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
+        .trim()
+        .split(/\s+/);
     const targetWords = clean(originalSentence);
     const userWords = clean(userTranscript);
-    
+
     if (userWords.length === 0 || (userWords.length === 1 && userWords[0] === "")) {
       setDiffResults([]);
-      setFeedback('尚未偵測到語音');
+      setFeedback("尚未偵測到語音");
       return 0;
     }
 
@@ -63,13 +68,16 @@ const App = () => {
     let totalPenalty = 0;
     let minorErrors = 0;
     let majorErrors = 0;
-    
-    const targetNegations = targetWords.filter(w => negationWords.has(w));
-    const userNegations = userWords.filter(w => negationWords.has(w));
-    let semanticInversion = targetNegations.length !== userNegations.length || 
-                          !targetNegations.every((val, index) => val === userNegations[index]);
 
-    const dp = Array.from({ length: targetWords.length + 1 }, () => Array(userWords.length + 1).fill(0));
+    const targetNegations = targetWords.filter((w) => negationWords.has(w));
+    const userNegations = userWords.filter((w) => negationWords.has(w));
+    let semanticInversion =
+      targetNegations.length !== userNegations.length ||
+      !targetNegations.every((val, index) => val === userNegations[index]);
+
+    const dp = Array.from({ length: targetWords.length + 1 }, () =>
+      Array(userWords.length + 1).fill(0)
+    );
     for (let i = 0; i <= targetWords.length; i++) dp[i][0] = i;
     for (let j = 0; j <= userWords.length; j++) dp[0][j] = j;
     for (let i = 1; i <= targetWords.length; i++) {
@@ -82,24 +90,25 @@ const App = () => {
     let i = targetWords.length;
     let j = userWords.length;
     let diffs = [];
-
     while (i > 0 || j > 0) {
       if (i > 0 && j > 0 && targetWords[i - 1] === userWords[j - 1]) {
-        diffs.unshift({ word: userWords[j - 1], type: 'correct' });
-        i--; j--;
+        diffs.unshift({ word: userWords[j - 1], type: "correct" });
+        i--;
+        j--;
       } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
         const wordDist = calculateLevenshtein(targetWords[i - 1], userWords[j - 1]);
         const deviationRatio = wordDist / targetWords[i - 1].length;
         if (deviationRatio <= 0.3) {
           totalPenalty += standardPenalty * 0.5;
           minorErrors++;
-          diffs.unshift({ word: userWords[j - 1], type: 'minor' });
+          diffs.unshift({ word: userWords[j - 1], type: "minor" });
         } else {
           totalPenalty += standardPenalty;
           majorErrors++;
-          diffs.unshift({ word: userWords[j - 1], type: 'major' });
+          diffs.unshift({ word: userWords[j - 1], type: "major" });
         }
-        i--; j--;
+        i--;
+        j--;
       } else if (i > 0 && (j === 0 || dp[i][j] === dp[i - 1][j] + 1)) {
         totalPenalty += standardPenalty;
         majorErrors++;
@@ -107,7 +116,7 @@ const App = () => {
       } else {
         totalPenalty += standardPenalty;
         majorErrors++;
-        diffs.unshift({ word: userWords[j - 1], type: 'major' });
+        diffs.unshift({ word: userWords[j - 1], type: "major" });
         j--;
       }
     }
@@ -117,17 +126,16 @@ const App = () => {
     if (semanticInversion) {
       totalPenalty += 3.5;
       setIsSemanticError(true);
-      setFeedback('嚴重失誤：漏唸或多唸了否定詞！');
+      setFeedback("嚴重失誤：漏唸或多唸了否定詞！");
     } else {
       setIsSemanticError(false);
       const scoreValue = Math.max(0, 10 - totalPenalty);
-      if (scoreValue >= 10) setFeedback('Perfect! 發音非常清晰');
-      else if (scoreValue >= 8) setFeedback('太棒了！僅有微小偏差');
-      else if (minorErrors > 0 && majorErrors === 0) setFeedback('發音有小瑕疵');
-      else if (scoreValue >= 5) setFeedback('還行，有些唸法需調整');
-      else setFeedback('重大字彙偏離');
+      if (scoreValue >= 10) setFeedback("Perfect! 發音非常清晰");
+      else if (scoreValue >= 8) setFeedback("太棒了！僅有微小偏差");
+      else if (minorErrors > 0 && majorErrors === 0) setFeedback("發音有小瑕疵");
+      else if (scoreValue >= 5) setFeedback("還行，有些唸法需調整");
+      else setFeedback("重大字彙偏離");
     }
-
     return parseFloat(Math.max(0, 10 - totalPenalty).toFixed(1));
   };
 
@@ -136,11 +144,11 @@ const App = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
+    recognition.lang = "en-US";
     recognition.interimResults = false;
     recognition.onstart = () => {
       setIsListening(true);
-      setTranscript('');
+      setTranscript("");
       setScore(null);
       setDiffResults([]);
     };
@@ -166,12 +174,16 @@ const App = () => {
         if (!lines[i].trim()) continue;
         const matches = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
         if (matches) {
-          const cleanArr = matches.map(m => m.replace(/^"|"$/g, ''));
+          const cleanArr = matches.map((m) => m.replace(/^"|"$/g, ""));
           parsedCards.push({
             id: Math.random().toString(36).substr(2, 9),
-            word: cleanArr[0], pos: cleanArr[1], meaning: cleanArr[2],
-            variations: cleanArr[3], collocations: cleanArr[4],
-            example: cleanArr[5], exampleTranslation: cleanArr[6]
+            word: cleanArr[0],
+            pos: cleanArr[1],
+            meaning: cleanArr[2],
+            variations: cleanArr[3],
+            collocations: cleanArr[4],
+            example: cleanArr[5],
+            exampleTranslation: cleanArr[6],
           });
         }
       }
@@ -189,35 +201,38 @@ const App = () => {
     if (queue.length === 0) return;
     const newQueue = [...queue];
     const currentCard = newQueue.shift();
-    setStats(prev => ({ ...prev, [type]: prev[type] + 1 }));
-    if (type === 'again') newQueue.splice(1, 0, currentCard);
-    else if (type === 'hard') newQueue.splice(Math.floor(newQueue.length / 2), 0, currentCard);
-    else if (type === 'good') newQueue.push(currentCard);
+    setStats((prev) => ({ ...prev, [type]: prev[type] + 1 }));
+    if (type === "again") newQueue.splice(1, 0, currentCard);
+    else if (type === "hard") newQueue.splice(Math.floor(newQueue.length / 2), 0, currentCard);
+    else if (type === "good") newQueue.push(currentCard);
     if (newQueue.length === 0) setIsFinished(true);
     else {
       setQueue(newQueue);
       setIsFlipped(false);
-      setTranscript('');
+      setTranscript("");
       setScore(null);
       setDiffResults([]);
-      setFeedback('');
+      setFeedback("");
     }
   };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (isFinished || originalCards.length === 0 || showInfo || isListening) return;
-      if (e.code === 'Space') { e.preventDefault(); setIsFlipped(prev => !prev); }
-      if (isFlipped) {
-        if (e.key === '1') handleSRS('again');
-        if (e.key === '2') handleSRS('hard');
-        if (e.key === '3') handleSRS('good');
-        if (e.key === '4') handleSRS('easy');
+      if (e.code === "Space") {
+        e.preventDefault();
+        setIsFlipped((prev) => !prev);
       }
-      if (e.key === 'Enter') speak(isFlipped ? queue[0]?.example : queue[0]?.word);
+      if (isFlipped) {
+        if (e.key === "1") handleSRS("again");
+        if (e.key === "2") handleSRS("hard");
+        if (e.key === "3") handleSRS("good");
+        if (e.key === "4") handleSRS("easy");
+      }
+      if (e.key === "Enter") speak(isFlipped ? queue[0]?.example : queue[0]?.word);
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [queue, isFlipped, isFinished, originalCards, showInfo, isListening]);
 
   useEffect(() => {
@@ -225,167 +240,313 @@ const App = () => {
   }, [queue[0]?.id, isFlipped]);
 
   useEffect(() => {
-    if (isFlipped && queue.length > 0 && isAutoSpeechReady && !isFinished) speak(queue[0].example);
+    if (isFlipped && queue.length > 0 && isAutoSpeechReady && !isFinished)
+      speak(queue[0].example);
   }, [isFlipped]);
 
+  const progress =
+    originalCards.length > 0
+      ? ((originalCards.length - queue.length) / originalCards.length) * 100
+      : 0;
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center p-4 font-sans text-slate-800 selection:bg-indigo-100 overflow-hidden">
-      {/* 頂部進度條 - 緊湊設計 */}
-      <div className="w-full max-w-md bg-white p-3 rounded-2xl shadow-sm border border-slate-200/60 mb-3 transition-all">
-        <div className="flex items-center gap-3">
-          <button onClick={() => fileInputRef.current.click()} className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600">
-            <Upload size={18} />
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col items-center justify-start p-3">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".csv"
+        className="hidden"
+      />
+
+      {/* Header */}
+      <div className="w-full max-w-md mb-3">
+        <div className="flex items-center justify-between bg-white rounded-2xl shadow-sm px-4 py-2.5 border border-slate-100">
+          <button
+            onClick={() => fileInputRef.current.click()}
+            className="flex items-center gap-1.5 text-indigo-600 hover:bg-indigo-50 rounded-xl px-2 py-1 text-sm font-semibold transition-colors"
+          >
+            <Upload size={15} />
+            上傳 CSV
           </button>
-          <div className="flex-1">
-            <div className="flex justify-between items-end mb-1">
-               <span className="text-[10px] font-black text-slate-400 font-mono">{originalCards.length - queue.length} / {originalCards.length}</span>
-               <div className="flex gap-2">
-                  <span className="text-[9px] font-bold text-red-400">A:{stats.again}</span>
-                  <span className="text-[9px] font-bold text-green-400">E:{stats.easy}</span>
-               </div>
-            </div>
-            <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-              <div className="bg-indigo-500 h-full transition-all duration-500" style={{ width: `${originalCards.length > 0 ? ((originalCards.length - queue.length) / originalCards.length) * 100 : 0}%` }} />
-            </div>
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+            <span className="text-indigo-600 font-bold">
+              {originalCards.length - queue.length} / {originalCards.length}
+            </span>
+            <span className="text-rose-400">A:{stats.again}</span>
+            <span className="text-emerald-500">E:{stats.easy}</span>
           </div>
-          <button onClick={() => setShowInfo(true)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400">
-            <HelpCircle size={18} />
+          <button
+            onClick={() => setShowInfo(true)}
+            className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors"
+          >
+            <HelpCircle size={16} />
           </button>
         </div>
-        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+
+        {/* Progress bar */}
+        <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </div>
 
+      {/* Empty state */}
+      {originalCards.length === 0 && (
+        <div
+          onClick={() => fileInputRef.current.click()}
+          className="w-full max-w-md mt-12 flex flex-col items-center gap-4 cursor-pointer group"
+        >
+          <div className="w-24 h-24 bg-indigo-50 rounded-3xl flex items-center justify-center group-hover:bg-indigo-100 transition-colors border-2 border-dashed border-indigo-200">
+            <Upload size={36} className="text-indigo-300" />
+          </div>
+          <div className="text-center">
+            <p className="text-slate-700 font-bold text-lg">點擊上傳 CSV 檔案</p>
+            <p className="text-slate-400 text-sm mt-1">word, pos, meaning, variations, collocations, example, translation</p>
+          </div>
+        </div>
+      )}
+
+      {/* Flashcard */}
       {!isFinished && originalCards.length > 0 && (
-        <div className="w-full max-w-md space-y-3">
-          <div className="relative h-[460px] w-full perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
-            <div className={`relative w-full h-full transition-transform duration-700 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-              {/* 正面：單字 */}
-              <div className="absolute inset-0 backface-hidden bg-white rounded-[2rem] shadow-lg border border-slate-100 flex flex-col items-center justify-center p-8">
-                <h2 className="text-6xl font-black text-slate-900 tracking-tighter mb-6">{queue[0]?.word}</h2>
-                <div className="w-14 h-14 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-2xl animate-bounce">
-                  <Volume2 size={28} />
-                </div>
-                <p className="absolute bottom-8 text-slate-300 text-[10px] font-black uppercase tracking-[0.3em]">Tap to Flip</p>
+        <div
+          onClick={() => setIsFlipped(!isFlipped)}
+          className="w-full max-w-md cursor-pointer select-none"
+          style={{ perspective: "1000px" }}
+        >
+          <div
+            style={{
+              transformStyle: "preserve-3d",
+              transition: "transform 0.45s cubic-bezier(0.4,0,0.2,1)",
+              transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+              position: "relative",
+              minHeight: "480px",
+            }}
+          >
+            {/* FRONT */}
+            <div
+              style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
+              className="absolute inset-0 bg-white rounded-3xl shadow-lg border border-slate-100 flex flex-col items-center justify-center p-8"
+            >
+              <div className="text-5xl font-black text-slate-900 tracking-tight text-center mb-3">
+                {queue[0]?.word}
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); speak(queue[0]?.word); }}
+                className="mt-2 p-3 bg-indigo-50 hover:bg-indigo-100 rounded-2xl text-indigo-500 transition-colors"
+              >
+                <Volume2 size={22} />
+              </button>
+              <p className="mt-8 text-slate-300 text-sm font-medium">點擊翻面 / Space</p>
+            </div>
+
+            {/* BACK */}
+            <div
+              style={{
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+                transform: "rotateY(180deg)",
+              }}
+              className="absolute inset-0 bg-white rounded-3xl shadow-lg border border-slate-100 flex flex-col p-5 overflow-y-auto"
+            >
+              {/* Word + POS */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl font-black text-slate-900">{queue[0]?.word}</span>
+                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-lg text-xs font-bold">
+                  {queue[0]?.pos}
+                </span>
               </div>
 
-              {/* 反面：優化後的垂直空間佈局 */}
-              <div className="absolute inset-0 backface-hidden bg-white rounded-[2rem] shadow-lg border border-slate-100 p-4 rotate-y-180 flex flex-col">
-                {/* 1. 縮小圖片高度 */}
-                <div className="w-full h-24 bg-slate-100 rounded-2xl mb-3 overflow-hidden relative group shrink-0">
-                   <img src={getImageUrl(queue[0]?.word)} alt={queue[0]?.word} className="w-full h-full object-cover" />
+              {/* Meaning */}
+              <p className="text-slate-700 font-semibold text-base mb-2">{queue[0]?.meaning}</p>
+
+              {/* Variations & Collocations */}
+              <div className="flex flex-wrap gap-2 mb-3 text-xs">
+                {queue[0]?.variations && (
+                  <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-lg font-medium">
+                    V: {queue[0].variations}
+                  </span>
+                )}
+                {queue[0]?.collocations && (
+                  <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg font-medium">
+                    C: {queue[0].collocations}
+                  </span>
+                )}
+              </div>
+
+              {/* Example sentence */}
+              <div className="bg-indigo-50 rounded-2xl p-3 mb-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-indigo-400 uppercase tracking-wide">Example</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); speak(queue[0]?.example); }}
+                    className="p-1.5 bg-white text-indigo-500 rounded-xl shadow-sm hover:bg-indigo-100 transition-colors"
+                  >
+                    <Volume2 size={14} />
+                  </button>
                 </div>
+                <p className="text-slate-700 font-semibold text-sm leading-relaxed italic">
+                  "{queue[0]?.example}"
+                </p>
+              </div>
 
-                <div className="flex-1 flex flex-col min-h-0 space-y-2">
-                  {/* 2. 緊湊單字資訊 */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-indigo-600 font-black text-[9px] px-1.5 py-0.5 bg-indigo-50 rounded uppercase tracking-wider shrink-0">{queue[0]?.pos}</span>
-                    <h3 className="text-xl font-bold text-slate-800 tracking-tight truncate">{queue[0]?.meaning}</h3>
-                  </div>
-
-                  {/* 3. 合併補充資訊以節省空間 */}
-                  <div className="grid grid-cols-2 gap-2 text-[10px] pb-2 border-b border-slate-50 shrink-0">
-                    <div className="truncate"><span className="font-bold text-slate-300 uppercase mr-1">V:</span><span className="text-slate-500">{queue[0]?.variations || '-'}</span></div>
-                    <div className="truncate"><span className="font-bold text-slate-300 uppercase mr-1">C:</span><span className="text-slate-500">{queue[0]?.collocations || '-'}</span></div>
-                  </div>
-
-                  {/* 4. 評分與回饋區 - 移除多餘 padding */}
-                  <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-100 flex-1 flex flex-col min-h-0">
-                    <div className="flex justify-between items-center mb-1 shrink-0">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Example</span>
-                      <div className="flex gap-1.5">
-                        <button onClick={(e) => { e.stopPropagation(); speak(queue[0]?.example); }} className="p-1.5 bg-white text-indigo-500 rounded-lg shadow-sm hover:bg-indigo-50"><Volume2 size={14} /></button>
-                        <button onClick={startListening} className={`p-1.5 rounded-lg shadow-sm transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-white hover:bg-green-600'}`}><Mic size={14} /></button>
-                      </div>
-                    </div>
-                    
-                    <p className="text-sm font-bold text-slate-800 leading-tight italic mb-2 shrink-0 line-clamp-2">"{queue[0]?.example}"</p>
-
-                    {/* 辨識結果與評分區 - 動態調整 */}
-                    {transcript ? (
-                      <div className={`mt-auto p-2.5 rounded-xl border-2 animate-in slide-in-from-bottom-2 duration-300 ${isSemanticError ? 'bg-red-50 border-red-100' : 'bg-white border-indigo-50'}`}>
-                        <div className="flex justify-between items-center mb-1.5">
-                            <span className="text-[9px] font-black text-slate-400 uppercase">Results</span>
-                            {score !== null && (
-                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${score >= 8 ? 'bg-green-500 text-white' : 'bg-slate-900 text-white'}`}>
-                                    {score} PTS
-                                </span>
-                            )}
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-x-1 gap-y-0.5 mb-1.5 max-h-12 overflow-y-auto">
-                          {diffResults.map((item, idx) => (
-                            <span key={idx} className={`text-xs font-bold ${
-                              item.type === 'correct' ? 'text-green-600' : 
-                              item.type === 'minor' ? 'text-orange-500 border-b border-dotted border-orange-300' : 
-                              'text-red-500 border-b border-dotted border-red-300'
-                            }`}>
-                              {item.word}
-                            </span>
-                          ))}
-                        </div>
-
-                        <p className={`text-[10px] font-black flex items-center gap-1 ${isSemanticError ? 'text-red-600' : 'text-indigo-600'}`}>
-                          {isSemanticError && <AlertTriangle size={10} className="shrink-0" />}
-                          {feedback}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="mt-auto pt-2 border-t border-slate-200/50">
-                        <p className="text-slate-400 text-[11px] font-medium leading-tight">{queue[0]?.exampleTranslation}</p>
-                      </div>
+              {/* Speech recognition result */}
+              {transcript ? (
+                <div className="bg-slate-50 rounded-2xl p-3 mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Results</span>
+                    {score !== null && (
+                      <span
+                        className={`text-xs font-black px-2 py-0.5 rounded-lg ${
+                          score >= 8 ? "bg-green-500 text-white" : "bg-slate-800 text-white"
+                        }`}
+                      >
+                        {score} PTS
+                      </span>
                     )}
                   </div>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {diffResults.map((item, idx) => (
+                      <span
+                        key={idx}
+                        className={`text-sm font-semibold ${
+                          item.type === "correct"
+                            ? "text-green-600"
+                            : item.type === "minor"
+                            ? "text-amber-500 underline decoration-dashed"
+                            : "text-rose-500 underline decoration-wavy"
+                        }`}
+                      >
+                        {item.word}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    {isSemanticError ? (
+                      <AlertTriangle size={13} className="text-rose-500" />
+                    ) : (
+                      <CheckCircle2 size={13} className="text-emerald-500" />
+                    )}
+                    <span className={isSemanticError ? "text-rose-500 font-bold" : "text-slate-500"}>
+                      {feedback}
+                    </span>
+                  </div>
                 </div>
+              ) : (
+                <p className="text-slate-400 text-xs italic mb-3 px-1">
+                  {queue[0]?.exampleTranslation}
+                </p>
+              )}
+
+              {/* Mic button */}
+              <button
+                onClick={startListening}
+                disabled={isListening}
+                className={`w-full py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 mb-3 ${
+                  isListening
+                    ? "bg-rose-100 text-rose-500 animate-pulse"
+                    : "bg-indigo-600 text-white hover:bg-indigo-700"
+                }`}
+              >
+                <Mic size={16} />
+                {isListening ? "聆聽中…" : "開始發音測試"}
+              </button>
+
+              {/* SRS buttons */}
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { type: "again", label: "再來", color: "bg-rose-500 hover:bg-rose-600" },
+                  { type: "hard", label: "困難", color: "bg-orange-400 hover:bg-orange-500" },
+                  { type: "good", label: "好的", color: "bg-emerald-500 hover:bg-emerald-600" },
+                  { type: "easy", label: "簡單", color: "bg-indigo-600 hover:bg-indigo-700" },
+                ].map((btn) => (
+                  <button
+                    key={btn.type}
+                    onClick={(e) => { e.stopPropagation(); handleSRS(btn.type); }}
+                    className={`py-3 rounded-xl font-black text-[11px] text-white uppercase tracking-widest transition-all active:scale-95 shadow-sm ${btn.color}`}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* 底部按鈕區 - 保持不變但縮小一點間距 */}
-          <div className={`grid grid-cols-4 gap-2 transition-all duration-500 ${isFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+      {/* Finished screen */}
+      {isFinished && (
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-lg border border-slate-100 p-8 flex flex-col items-center gap-5 mt-4">
+          <Trophy size={48} className="text-amber-400" />
+          <h2 className="text-2xl font-black text-slate-900">練習完成！</h2>
+          <div className="grid grid-cols-2 gap-3 w-full text-sm">
             {[
-              { type: 'again', color: 'bg-red-500' },
-              { type: 'hard', color: 'bg-orange-400' },
-              { type: 'good', color: 'bg-green-500' },
-              { type: 'easy', color: 'bg-indigo-600' }
-            ].map((btn) => (
-              <button key={btn.type} onClick={(e) => { e.stopPropagation(); handleSRS(btn.type); }} className={`py-3.5 rounded-xl font-black text-[10px] text-white uppercase tracking-widest transition-all active:scale-95 shadow-md ${btn.color}`}>
-                {btn.type}
-              </button>
+              { label: "Again", value: stats.again, color: "text-rose-500" },
+              { label: "Hard", value: stats.hard, color: "text-orange-400" },
+              { label: "Good", value: stats.good, color: "text-emerald-500" },
+              { label: "Easy", value: stats.easy, color: "text-indigo-600" },
+            ].map((s) => (
+              <div key={s.label} className="bg-slate-50 rounded-2xl p-3 text-center">
+                <p className="text-slate-400 text-xs font-semibold">{s.label}</p>
+                <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+              </div>
             ))}
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-slate-800 transition-colors"
+          >
+            重新開始
+          </button>
+        </div>
+      )}
+
+      {/* Info modal */}
+      {showInfo && (
+        <div
+          onClick={() => setShowInfo(false)}
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-slate-900">評分指南</h3>
+              <button onClick={() => setShowInfo(false)} className="p-1.5 hover:bg-slate-100 rounded-xl">
+                <X size={18} className="text-slate-400" />
+              </button>
+            </div>
+            <ul className="space-y-2 text-sm text-slate-600 leading-relaxed mb-5">
+              <li>
+                <span className="text-green-600 font-bold">綠字</span>：發音準確。
+              </li>
+              <li>
+                <span className="text-amber-500 font-bold">橘字虛線</span>：發音輕微瑕疵。
+              </li>
+              <li>
+                <span className="text-rose-500 font-bold">紅字波浪線</span>：發音偏差或多唸。
+              </li>
+              <li>
+                <span className="text-rose-600 font-bold">語意反轉</span>：否定詞漏唸，扣 3.5 分。
+              </li>
+            </ul>
+            <div className="text-xs text-slate-400 bg-slate-50 rounded-xl p-3 mb-4">
+              <p className="font-bold mb-1">鍵盤快捷鍵</p>
+              <p>Space — 翻面　Enter — 朗讀</p>
+              <p>1/2/3/4 — Again / Hard / Good / Easy</p>
+            </div>
+            <button
+              onClick={() => setShowInfo(false)}
+              className="w-full py-3 bg-slate-900 text-white rounded-xl font-black text-sm hover:bg-slate-800 transition-colors"
+            >
+              我明白了
+            </button>
           </div>
         </div>
       )}
-
-      {isFinished && (
-        <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-xl p-8 text-center space-y-6">
-          <div className="bg-yellow-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto"><Trophy size={40} className="text-yellow-500" /></div>
-          <h2 className="text-2xl font-black">練習完成！</h2>
-          <button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black">重新開始</button>
-        </div>
-      )}
-
-      {originalCards.length === 0 && (
-        <div className="flex flex-col items-center justify-center h-[350px] border-2 border-dashed border-slate-200 rounded-[2rem] w-full max-w-md bg-white p-10 cursor-pointer hover:border-indigo-300" onClick={() => fileInputRef.current.click()}>
-          <ImageIcon size={40} className="text-indigo-400 mb-4" />
-          <p className="text-slate-900 font-black text-lg">點擊上傳 CSV 檔案</p>
-        </div>
-      )}
-
-      {showInfo && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-6" onClick={() => setShowInfo(false)}>
-            <div className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="bg-indigo-600 p-5 flex justify-between items-center text-white">
-                  <h3 className="font-black">評分指南</h3>
-                  <button onClick={() => setShowInfo(false)}><X size={20}/></button>
-                </div>
-                <div className="p-6 space-y-4">
-                    <p className="text-xs text-slate-600 leading-relaxed">• <b>綠字</b>：發音準確。<br/>• <b>橘/紅虛線</b>：發音瑕疵或多唸。<br/>• <b>語意反轉</b>：否定詞漏唸，扣 3.5 分。</p>
-                    <button onClick={() => setShowInfo(false)} className="w-full py-3 bg-slate-900 text-white rounded-xl font-black text-sm">我明白了</button>
-                </div>
-            </div>
-        </div>
-      )}
-      <style>{`.perspective-1000 { perspective: 1000px; } .transform-style-3d { transform-style: preserve-3d; } .backface-hidden { backface-visibility: hidden; } .rotate-y-180 { transform: rotateY(180deg); }`}</style>
     </div>
   );
 };
