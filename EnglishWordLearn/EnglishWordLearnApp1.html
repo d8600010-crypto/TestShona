@@ -1,239 +1,591 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, Upload, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import { Volume2, Upload, Trophy, HelpCircle, X, Mic, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 const App = () => {
-  const [cards, setCards] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [originalCards, setOriginalCards] = useState([]);
+  const [queue, setQueue] = useState([]);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [stats, setStats] = useState({ again: 0, hard: 0, good: 0, easy: 0 });
+  const [isFinished, setIsFinished] = useState(false);
   const [isAutoSpeechReady, setIsAutoSpeechReady] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [score, setScore] = useState(null);
+  const [isSemanticError, setIsSemanticError] = useState(false);
+  const [diffResults, setDiffResults] = useState([]);
+  const [feedback, setFeedback] = useState("");
   const fileInputRef = useRef(null);
 
-  // 朗讀功能
   const speak = (text) => {
     if (!text) return;
-    window.speechSynthesis.cancel(); // 停止當前朗讀
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
+    utterance.lang = "en-US";
     utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
   };
 
-  // 處理 CSV 解析
+  const calculateLevenshtein = (src, tgt) => {
+    const res = Array.from({ length: src.length + 1 }, () =>
+      Array(tgt.length + 1).fill(0)
+    );
+    for (let i = 0; i <= src.length; i++) res[i][0] = i;
+    for (let j = 0; j <= tgt.length; j++) res[0][j] = j;
+    for (let i = 1; i <= src.length; i++) {
+      for (let j = 1; j <= tgt.length; j++) {
+        if (src[i - 1] === tgt[j - 1]) res[i][j] = res[i - 1][j - 1];
+        else
+          res[i][j] =
+            Math.min(res[i - 1][j], res[i][j - 1], res[i - 1][j - 1]) + 1;
+      }
+    }
+    return res[src.length][tgt.length];
+  };
+
+  const computeScoreAndDiff = (originalSentence, userTranscript) => {
+    const negationWords = new Set([
+      "not","no","never","none","neither","nor","hardly","seldom",
+      "don't","doesn't","didn't","can't","couldn't","won't","wouldn't",
+      "isn't","aren't","wasn't","weren't","hasn't","haven't","hadn't","shouldn't",
+    ]);
+    const clean = (text) =>
+      text.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").trim().split(/\s+/);
+    const targetWords = clean(originalSentence);
+    const userWords = clean(userTranscript);
+
+    if (userWords.length === 0 || (userWords.length === 1 && userWords[0] === "")) {
+      setDiffResults([]);
+      setFeedback("尚未偵測到語音");
+      return 0;
+    }
+
+    const standardPenalty = 10 / targetWords.length;
+    let totalPenalty = 0;
+    let minorErrors = 0;
+    let majorErrors = 0;
+
+    const targetNegations = targetWords.filter((w) => negationWords.has(w));
+    const userNegations = userWords.filter((w) => negationWords.has(w));
+    let semanticInversion =
+      targetNegations.length !== userNegations.length ||
+      !targetNegations.every((val, index) => val === userNegations[index]);
+
+    const dp = Array.from({ length: targetWords.length + 1 }, () =>
+      Array(userWords.length + 1).fill(0)
+    );
+    for (let i = 0; i <= targetWords.length; i++) dp[i][0] = i;
+    for (let j = 0; j <= userWords.length; j++) dp[0][j] = j;
+    for (let i = 1; i <= targetWords.length; i++) {
+      for (let j = 1; j <= userWords.length; j++) {
+        if (targetWords[i - 1] === userWords[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+        else dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]) + 1;
+      }
+    }
+
+    let i = targetWords.length;
+    let j = userWords.length;
+    let diffs = [];
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && targetWords[i - 1] === userWords[j - 1]) {
+        diffs.unshift({ word: userWords[j - 1], type: "correct" });
+        i--; j--;
+      } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
+        const wordDist = calculateLevenshtein(targetWords[i - 1], userWords[j - 1]);
+        const deviationRatio = wordDist / targetWords[i - 1].length;
+        if (deviationRatio <= 0.3) {
+          totalPenalty += standardPenalty * 0.5;
+          minorErrors++;
+          diffs.unshift({ word: userWords[j - 1], type: "minor" });
+        } else {
+          totalPenalty += standardPenalty;
+          majorErrors++;
+          diffs.unshift({ word: userWords[j - 1], type: "major" });
+        }
+        i--; j--;
+      } else if (i > 0 && (j === 0 || dp[i][j] === dp[i - 1][j] + 1)) {
+        totalPenalty += standardPenalty;
+        majorErrors++;
+        i--;
+      } else {
+        totalPenalty += standardPenalty;
+        majorErrors++;
+        diffs.unshift({ word: userWords[j - 1], type: "major" });
+        j--;
+      }
+    }
+
+    setDiffResults(diffs);
+
+    if (semanticInversion) {
+      totalPenalty += 3.5;
+      setIsSemanticError(true);
+      setFeedback("嚴重失誤：漏唸或多唸了否定詞！");
+    } else {
+      setIsSemanticError(false);
+      const scoreValue = Math.max(0, 10 - totalPenalty);
+      if (scoreValue >= 10) setFeedback("Perfect! 發音非常清晰");
+      else if (scoreValue >= 8) setFeedback("太棒了！僅有微小偏差");
+      else if (minorErrors > 0 && majorErrors === 0) setFeedback("發音有小瑕疵");
+      else if (scoreValue >= 5) setFeedback("還行，有些唸法需調整");
+      else setFeedback("重大字彙偏離");
+    }
+    return parseFloat(Math.max(0, 10 - totalPenalty).toFixed(1));
+  };
+
+  const startListening = (e) => {
+    e.stopPropagation();
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.onstart = () => {
+      setIsListening(true);
+      setTranscript("");
+      setScore(null);
+      setDiffResults([]);
+    };
+    recognition.onresult = (event) => {
+      const result = event.results[0][0].transcript;
+      setTranscript(result);
+      const calculatedScore = computeScoreAndDiff(queue[0].example, result);
+      setScore(calculatedScore);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.start();
+  };
+
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target.result;
       const lines = text.split(/\r?\n/);
       const parsedCards = [];
-
-      // 跳過標題列
       for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
-        
-        // 簡單的 CSV 解析（處理引號）
         const matches = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
         if (matches) {
-          const clean = matches.map(m => m.replace(/^"|"$/g, ''));
+          const cleanArr = matches.map((m) => m.replace(/^"|"$/g, ""));
           parsedCards.push({
-            word: clean[0],
-            pos: clean[1],
-            meaning: clean[2],
-            variations: clean[3],
-            collocations: clean[4],
-            example: clean[5],
-            exampleTranslation: clean[6]
+            id: Math.random().toString(36).substr(2, 9),
+            word: cleanArr[0],
+            pos: cleanArr[1],
+            meaning: cleanArr[2],
+            variations: cleanArr[3],
+            collocations: cleanArr[4],
+            example: cleanArr[5],
+            exampleTranslation: cleanArr[6],
           });
         }
       }
-      setCards(parsedCards);
-      setCurrentIndex(0);
+      setOriginalCards(parsedCards);
+      setQueue([...parsedCards]);
+      setStats({ again: 0, hard: 0, good: 0, easy: 0 });
+      setIsFinished(false);
       setIsFlipped(false);
       setIsAutoSpeechReady(true);
     };
     reader.readAsText(file);
   };
 
-  // 當切換到正面或背面時自動朗讀
-  useEffect(() => {
-    if (cards.length > 0 && isAutoSpeechReady) {
-      if (!isFlipped) {
-        speak(cards[currentIndex].word);
-      } else {
-        speak(cards[currentIndex].example);
-      }
+  const handleSRS = (type) => {
+    if (queue.length === 0) return;
+    const newQueue = [...queue];
+    const currentCard = newQueue.shift();
+    setStats((prev) => ({ ...prev, [type]: prev[type] + 1 }));
+    if (type === "again") newQueue.splice(1, 0, currentCard);
+    else if (type === "hard") newQueue.splice(Math.floor(newQueue.length / 2), 0, currentCard);
+    else if (type === "good") newQueue.push(currentCard);
+    if (newQueue.length === 0) setIsFinished(true);
+    else {
+      setQueue(newQueue);
+      setIsFlipped(false);
+      setTranscript("");
+      setScore(null);
+      setDiffResults([]);
+      setFeedback("");
     }
-  }, [currentIndex, isFlipped, cards, isAutoSpeechReady]);
+  };
 
-  // 鍵盤監聽 (Enter 鍵朗讀)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Enter' && cards.length > 0) {
-        if (!isFlipped) {
-          speak(cards[currentIndex].word);
-        } else {
-          speak(cards[currentIndex].example);
-        }
+      if (isFinished || originalCards.length === 0 || showInfo || isListening) return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        setIsFlipped((prev) => !prev);
       }
+      if (isFlipped) {
+        if (e.key === "1") handleSRS("again");
+        if (e.key === "2") handleSRS("hard");
+        if (e.key === "3") handleSRS("good");
+        if (e.key === "4") handleSRS("easy");
+      }
+      if (e.key === "Enter") speak(isFlipped ? queue[0]?.example : queue[0]?.word);
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, isFlipped, cards]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [queue, isFlipped, isFinished, originalCards, showInfo, isListening]);
 
-  const progress = cards.length > 0 ? ((currentIndex + 1) / cards.length) * 100 : 0;
+  useEffect(() => {
+    if (queue.length > 0 && !isFlipped && !isFinished) speak(queue[0].word);
+  }, [queue[0]?.id, isFlipped]);
+
+  useEffect(() => {
+    if (isFlipped && queue.length > 0 && isAutoSpeechReady && !isFinished)
+      speak(queue[0].example);
+  }, [isFlipped]);
+
+  const progress =
+    originalCards.length > 0
+      ? ((originalCards.length - queue.length) / originalCards.length) * 100
+      : 0;
+
+  const card = queue[0];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center p-4 font-sans text-slate-800">
-      {/* 頂部導航與匯入 */}
-      <div className="w-full max-w-md flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-indigo-600">單字學習卡</h1>
-        <button 
-          onClick={() => fileInputRef.current.click()}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full transition-all shadow-md"
-        >
-          <Upload size={18} />
-          <span>匯入 CSV</span>
-        </button>
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          onChange={handleFileUpload} 
-          accept=".csv" 
-          className="hidden" 
-        />
+    <div className="min-h-screen flex flex-col items-center justify-start p-3 pt-4"
+      style={{ background: "var(--color-background-tertiary)" }}>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".csv"
+        className="hidden"
+      />
+
+      {/* Header */}
+      <div className="w-full max-w-md mb-3">
+        <div className="flex items-center justify-between rounded-2xl px-4 py-2.5"
+          style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)" }}>
+          <button
+            onClick={() => fileInputRef.current.click()}
+            className="flex items-center gap-1.5 rounded-xl px-2 py-1 text-sm font-semibold transition-colors"
+            style={{ color: "var(--color-text-info)" }}
+          >
+            <Upload size={15} />
+            上傳 CSV
+          </button>
+          <div className="flex items-center gap-3 text-xs font-medium"
+            style={{ color: "var(--color-text-secondary)" }}>
+            <span style={{ color: "var(--color-text-info)", fontWeight: 600 }}>
+              {originalCards.length - queue.length} / {originalCards.length}
+            </span>
+            <span style={{ color: "var(--color-text-danger)" }}>A:{stats.again}</span>
+            <span style={{ color: "var(--color-text-success)" }}>E:{stats.easy}</span>
+          </div>
+          <button
+            onClick={() => setShowInfo(true)}
+            className="p-1.5 rounded-xl transition-colors"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            <HelpCircle size={16} />
+          </button>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mt-2 h-1 rounded-full overflow-hidden"
+          style={{ background: "var(--color-border-tertiary)" }}>
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${progress}%`, background: "var(--color-text-info)" }}
+          />
+        </div>
       </div>
 
-      {cards.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-slate-300 rounded-2xl w-full max-w-md bg-white">
-          <p className="text-slate-500 mb-2">尚未匯入單字資料</p>
-          <p className="text-sm text-slate-400 text-center px-8">請點擊右上角匯入按鈕選擇您的 CSV 檔案</p>
-        </div>
-      ) : (
-        <div className="w-full max-w-md space-y-6">
-          {/* 進度條 */}
-          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden shadow-inner">
-            <div 
-              className="bg-indigo-500 h-full transition-all duration-300 ease-out"
-              style={{ width: `${progress}%` }}
-            />
+      {/* Empty state */}
+      {originalCards.length === 0 && (
+        <div
+          onClick={() => fileInputRef.current.click()}
+          className="w-full max-w-md mt-16 flex flex-col items-center gap-4 cursor-pointer"
+        >
+          <div className="w-24 h-24 rounded-3xl flex items-center justify-center"
+            style={{ background: "var(--color-background-secondary)", border: "1.5px dashed var(--color-border-secondary)" }}>
+            <Upload size={32} style={{ color: "var(--color-text-tertiary)" }} />
           </div>
-          <div className="text-center text-sm font-medium text-slate-500">
-            進度: {currentIndex + 1} / {cards.length}
-          </div>
-
-          {/* 卡片區域 */}
-          <div 
-            className="relative h-96 w-full perspective-1000 cursor-pointer"
-            onClick={() => setIsFlipped(!isFlipped)}
-          >
-            <div className={`relative w-full h-full transition-transform duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-              
-              {/* 正面 */}
-              <div className="absolute inset-0 backface-hidden bg-white rounded-3xl shadow-xl border border-slate-100 flex flex-col items-center justify-center p-8">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-5xl font-extrabold text-slate-900 tracking-tight">
-                    {cards[currentIndex].word}
-                  </h2>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); speak(cards[currentIndex].word); }}
-                    className="p-3 bg-indigo-50 text-indigo-500 rounded-full hover:bg-indigo-100 transition-colors"
-                  >
-                    <Volume2 size={28} />
-                  </button>
-                </div>
-                <p className="mt-8 text-slate-400 text-sm animate-pulse">點擊卡片翻面</p>
-              </div>
-
-              {/* 背面 */}
-              <div className="absolute inset-0 backface-hidden bg-white rounded-3xl shadow-xl border border-slate-100 p-8 rotate-y-180 overflow-y-auto">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <span className="text-indigo-600 font-bold px-2 py-1 bg-indigo-50 rounded text-sm uppercase">
-                      {cards[currentIndex].pos}
-                    </span>
-                    <h3 className="text-2xl font-bold text-slate-800">{cards[currentIndex].meaning}</h3>
-                  </div>
-                  
-                  <div>
-                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">詞性變化</label>
-                    <p className="text-slate-700">{cards[currentIndex].variations || '無'}</p>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">搭配詞</label>
-                    <p className="text-slate-700">{cards[currentIndex].collocations || '無'}</p>
-                  </div>
-
-                  <div className="pt-2 bg-slate-50 p-4 rounded-xl relative group">
-                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">例句</label>
-                    <div className="flex items-start gap-2">
-                      <p className="text-slate-800 font-medium leading-relaxed italic">
-                        "{cards[currentIndex].example}"
-                      </p>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); speak(cards[currentIndex].example); }}
-                        className="p-2 bg-white text-indigo-500 rounded-full shadow-sm hover:shadow-md transition-all flex-shrink-0"
-                      >
-                        <Volume2 size={18} />
-                      </button>
-                    </div>
-                    <p className="mt-2 text-slate-500 text-sm">
-                      {cards[currentIndex].exampleTranslation}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* 控制按鈕 */}
-          <div className="flex justify-between items-center px-4">
-            <button 
-              onClick={() => {
-                setCurrentIndex(prev => Math.max(0, prev - 1));
-                setIsFlipped(false);
-              }}
-              disabled={currentIndex === 0}
-              className="p-4 bg-white shadow-md rounded-2xl disabled:opacity-30 text-slate-600 hover:text-indigo-600 transition-colors"
-            >
-              <ChevronLeft size={32} />
-            </button>
-
-            <button 
-              onClick={() => {
-                setCurrentIndex(0);
-                setIsFlipped(false);
-              }}
-              className="p-3 text-slate-400 hover:text-indigo-500 transition-colors"
-              title="重新開始"
-            >
-              <RotateCcw size={24} />
-            </button>
-
-            <button 
-              onClick={() => {
-                setCurrentIndex(prev => Math.min(cards.length - 1, prev + 1));
-                setIsFlipped(false);
-              }}
-              disabled={currentIndex === cards.length - 1}
-              className="p-4 bg-white shadow-md rounded-2xl disabled:opacity-30 text-slate-600 hover:text-indigo-600 transition-colors"
-            >
-              <ChevronRight size={32} />
-            </button>
+          <div className="text-center">
+            <p className="font-semibold text-lg" style={{ color: "var(--color-text-primary)" }}>點擊上傳 CSV 檔案</p>
+            <p className="text-sm mt-1" style={{ color: "var(--color-text-tertiary)" }}>
+              word, pos, meaning, variations, collocations, example, translation
+            </p>
           </div>
         </div>
       )}
 
-      {/* Tailwind 翻轉效果輔助樣式 */}
-      <style>{`
-        .perspective-1000 { perspective: 1000px; }
-        .transform-style-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; }
-        .rotate-y-180 { transform: rotateY(180deg); }
-      `}</style>
+      {/* Flashcard */}
+      {!isFinished && originalCards.length > 0 && (
+        <div
+          onClick={() => setIsFlipped(!isFlipped)}
+          className="w-full max-w-md cursor-pointer select-none"
+          style={{ perspective: "1000px" }}
+        >
+          <div
+            style={{
+              transformStyle: "preserve-3d",
+              transition: "transform 0.45s cubic-bezier(0.4,0,0.2,1)",
+              transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+              position: "relative",
+              height: isFlipped ? "auto" : "380px",
+              minHeight: "380px",
+            }}
+          >
+            {/* FRONT */}
+            <div
+              style={{
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+                position: isFlipped ? "absolute" : "relative",
+                inset: 0,
+                background: "var(--color-background-primary)",
+                border: "0.5px solid var(--color-border-tertiary)",
+              }}
+              className="rounded-3xl flex flex-col items-center justify-center p-8"
+            >
+              <div className="text-5xl font-black tracking-tight text-center mb-3"
+                style={{ color: "var(--color-text-primary)" }}>
+                {card?.word}
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); speak(card?.word); }}
+                className="mt-2 p-3 rounded-2xl transition-colors"
+                style={{ background: "var(--color-background-secondary)", color: "var(--color-text-info)" }}
+              >
+                <Volume2 size={22} />
+              </button>
+              <p className="mt-10 text-sm font-medium" style={{ color: "var(--color-text-tertiary)" }}>
+                點擊翻面 / Space
+              </p>
+            </div>
+
+            {/* BACK */}
+            <div
+              style={{
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+                transform: "rotateY(180deg)",
+                position: isFlipped ? "relative" : "absolute",
+                inset: 0,
+                background: "var(--color-background-primary)",
+                border: "0.5px solid var(--color-border-tertiary)",
+              }}
+              className="rounded-3xl flex flex-col p-5"
+            >
+              {/* Word + POS */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl font-black" style={{ color: "var(--color-text-primary)" }}>
+                  {card?.word}
+                </span>
+                <span className="px-2 py-0.5 rounded-lg text-xs font-semibold"
+                  style={{ background: "var(--color-background-info)", color: "var(--color-text-info)" }}>
+                  {card?.pos}
+                </span>
+              </div>
+
+              {/* Meaning */}
+              <p className="font-semibold text-base mb-3" style={{ color: "var(--color-text-primary)" }}>
+                {card?.meaning}
+              </p>
+
+              {/* Variations & Collocations */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {card?.variations && (
+                  <span className="text-xs px-2 py-0.5 rounded-lg font-medium"
+                    style={{ background: "var(--color-background-warning)", color: "var(--color-text-warning)" }}>
+                    V: {card.variations}
+                  </span>
+                )}
+                {card?.collocations && (
+                  <span className="text-xs px-2 py-0.5 rounded-lg font-medium"
+                    style={{ background: "var(--color-background-success)", color: "var(--color-text-success)" }}>
+                    C: {card.collocations}
+                  </span>
+                )}
+              </div>
+
+              {/* Example sentence */}
+              <div className="rounded-2xl p-3 mb-3"
+                style={{ background: "var(--color-background-secondary)" }}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--color-text-tertiary)" }}>Example</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); speak(card?.example); }}
+                    className="p-1.5 rounded-xl transition-colors"
+                    style={{ background: "var(--color-background-primary)", color: "var(--color-text-info)", border: "0.5px solid var(--color-border-tertiary)" }}
+                  >
+                    <Volume2 size={13} />
+                  </button>
+                </div>
+                <p className="text-sm leading-relaxed italic font-medium"
+                  style={{ color: "var(--color-text-primary)" }}>
+                  "{card?.example}"
+                </p>
+              </div>
+
+              {/* Speech result or translation */}
+              {transcript ? (
+                <div className="rounded-2xl p-3 mb-3"
+                  style={{ background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)" }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: "var(--color-text-tertiary)" }}>Results</span>
+                    {score !== null && (
+                      <span className="text-xs font-black px-2 py-0.5 rounded-lg"
+                        style={{
+                          background: score >= 8 ? "var(--color-background-success)" : "var(--color-background-danger)",
+                          color: score >= 8 ? "var(--color-text-success)" : "var(--color-text-danger)",
+                        }}>
+                        {score} PTS
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {diffResults.map((item, idx) => (
+                      <span
+                        key={idx}
+                        className="text-sm font-semibold"
+                        style={{
+                          color: item.type === "correct"
+                            ? "var(--color-text-success)"
+                            : item.type === "minor"
+                            ? "var(--color-text-warning)"
+                            : "var(--color-text-danger)",
+                          textDecoration: item.type === "minor"
+                            ? "underline dashed"
+                            : item.type === "major"
+                            ? "underline wavy"
+                            : "none",
+                        }}
+                      >
+                        {item.word}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs"
+                    style={{ color: isSemanticError ? "var(--color-text-danger)" : "var(--color-text-secondary)" }}>
+                    {isSemanticError
+                      ? <AlertTriangle size={13} style={{ color: "var(--color-text-danger)" }} />
+                      : <CheckCircle2 size={13} style={{ color: "var(--color-text-success)" }} />}
+                    <span className={isSemanticError ? "font-semibold" : ""}>{feedback}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs italic mb-3 px-1" style={{ color: "var(--color-text-tertiary)" }}>
+                  {card?.exampleTranslation}
+                </p>
+              )}
+
+              {/* Mic button */}
+              <button
+                onClick={startListening}
+                disabled={isListening}
+                className="w-full py-2.5 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 mb-3"
+                style={isListening
+                  ? { background: "var(--color-background-danger)", color: "var(--color-text-danger)", border: "0.5px solid var(--color-border-danger)" }
+                  : { background: "var(--color-text-info)", color: "#fff" }}
+              >
+                <Mic size={15} />
+                {isListening ? "聆聽中…" : "開始發音測試"}
+              </button>
+
+              {/* SRS buttons */}
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { type: "again", label: "再來", bg: "var(--color-background-danger)", fg: "var(--color-text-danger)" },
+                  { type: "hard", label: "困難", bg: "var(--color-background-warning)", fg: "var(--color-text-warning)" },
+                  { type: "good", label: "好的", bg: "var(--color-background-success)", fg: "var(--color-text-success)" },
+                  { type: "easy", label: "簡單", bg: "var(--color-background-info)", fg: "var(--color-text-info)" },
+                ].map((btn, idx) => (
+                  <button
+                    key={btn.type}
+                    onClick={(e) => { e.stopPropagation(); handleSRS(btn.type); }}
+                    className="py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wide transition-all active:scale-95"
+                    style={{ background: btn.bg, color: btn.fg }}
+                  >
+                    <span className="block text-[10px] opacity-60 mb-0.5">{idx + 1}</span>
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Finished screen */}
+      {isFinished && (
+        <div className="w-full max-w-md rounded-3xl p-8 flex flex-col items-center gap-5 mt-4"
+          style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)" }}>
+          <Trophy size={44} style={{ color: "var(--color-text-warning)" }} />
+          <h2 className="text-2xl font-black" style={{ color: "var(--color-text-primary)" }}>練習完成！</h2>
+          <div className="grid grid-cols-2 gap-3 w-full text-sm">
+            {[
+              { label: "Again", value: stats.again, fg: "var(--color-text-danger)" },
+              { label: "Hard", value: stats.hard, fg: "var(--color-text-warning)" },
+              { label: "Good", value: stats.good, fg: "var(--color-text-success)" },
+              { label: "Easy", value: stats.easy, fg: "var(--color-text-info)" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-2xl p-3 text-center"
+                style={{ background: "var(--color-background-secondary)" }}>
+                <p className="text-xs font-medium mb-1" style={{ color: "var(--color-text-tertiary)" }}>{s.label}</p>
+                <p className="text-2xl font-black" style={{ color: s.fg }}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full py-3.5 rounded-2xl font-semibold transition-colors"
+            style={{ background: "var(--color-text-primary)", color: "var(--color-background-primary)" }}
+          >
+            重新開始
+          </button>
+        </div>
+      )}
+
+      {/* Info modal — fixed positioning avoided; use faux overlay */}
+      {showInfo && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ background: "rgba(0,0,0,0.4)" }}
+          onClick={() => setShowInfo(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="rounded-3xl p-6 max-w-sm w-full"
+            style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)" }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold" style={{ color: "var(--color-text-primary)" }}>評分指南</h3>
+              <button onClick={() => setShowInfo(false)}
+                className="p-1.5 rounded-xl"
+                style={{ color: "var(--color-text-tertiary)" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <ul className="space-y-2 text-sm leading-relaxed mb-5" style={{ color: "var(--color-text-secondary)" }}>
+              <li><span className="font-semibold" style={{ color: "var(--color-text-success)" }}>綠字</span>：發音準確。</li>
+              <li><span className="font-semibold" style={{ color: "var(--color-text-warning)" }}>橘字虛線</span>：發音輕微瑕疵。</li>
+              <li><span className="font-semibold" style={{ color: "var(--color-text-danger)" }}>紅字波浪線</span>：發音偏差或多唸。</li>
+              <li><span className="font-semibold" style={{ color: "var(--color-text-danger)" }}>語意反轉</span>：否定詞漏唸，扣 3.5 分。</li>
+            </ul>
+            <div className="rounded-xl p-3 mb-4 text-xs"
+              style={{ background: "var(--color-background-secondary)", color: "var(--color-text-secondary)" }}>
+              <p className="font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>鍵盤快捷鍵</p>
+              <p>Space — 翻面　Enter — 朗讀</p>
+              <p>1 / 2 / 3 / 4 — Again / Hard / Good / Easy</p>
+            </div>
+            <button
+              onClick={() => setShowInfo(false)}
+              className="w-full py-3 rounded-xl font-semibold text-sm transition-colors"
+              style={{ background: "var(--color-text-primary)", color: "var(--color-background-primary)" }}
+            >
+              我明白了
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
