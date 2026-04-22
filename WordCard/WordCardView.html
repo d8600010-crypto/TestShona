@@ -12,6 +12,9 @@
       --accent-1: #c8853a;
       --accent-2: #3a7dc8;
       --accent-3: #7a3ac8;
+      --accent-4: #c83a7a; /* 新增顏色 */
+      --accent-5: #3ac8b2; /* 新增顏色 */
+      --accent-6: #e67e22; /* 新增顏色 */
       --green: #2e8b57;
       --red: #c0392b;
       --border: #d6cfc4;
@@ -29,7 +32,6 @@
       overflow-x: hidden;
     }
 
-    /* Subtle paper texture */
     body::before {
       content: '';
       position: fixed;
@@ -40,7 +42,6 @@
       z-index: 0;
     }
 
-    /* ── HEADER ── */
     header {
       position: relative;
       background: var(--ink);
@@ -55,7 +56,7 @@
       position: absolute;
       bottom: 0; left: 0; right: 0;
       height: 4px;
-      background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3));
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-4));
     }
 
     .header-eyebrow {
@@ -77,9 +78,7 @@
       margin-bottom: 16px;
     }
 
-    header h1 span {
-      color: var(--accent-1);
-    }
+    header h1 span { color: var(--accent-1); }
 
     header p {
       font-size: 1.05rem;
@@ -102,7 +101,6 @@
       user-select: none;
     }
 
-    /* ── MAIN LAYOUT ── */
     main {
       position: relative;
       z-index: 1;
@@ -111,7 +109,6 @@
       padding: 56px 24px 80px;
     }
 
-    /* ── SECTION LABEL ── */
     .section-label {
       display: flex;
       align-items: center;
@@ -144,10 +141,7 @@
       background: var(--border);
     }
 
-    /* ── BROWSE SECTION ── */
-    .browse-section {
-      margin-bottom: 64px;
-    }
+    .browse-section { margin-bottom: 64px; }
 
     .volumes-grid {
       display: grid;
@@ -190,9 +184,13 @@
       flex-shrink: 0;
     }
 
+    /* 輯數顏色分配 */
     .vol-1 .volume-icon { background: rgba(46,139,87,0.12); }
     .vol-2 .volume-icon { background: rgba(58,125,200,0.12); }
     .vol-3 .volume-icon { background: rgba(122,58,200,0.12); }
+    .vol-4 .volume-icon { background: rgba(200,58,122,0.12); }
+    .vol-5 .volume-icon { background: rgba(58,200,178,0.12); }
+    .vol-6 .volume-icon { background: rgba(230,126,34,0.12); }
 
     .volume-title-group h3 {
       font-family: 'Playfair Display', serif;
@@ -214,10 +212,9 @@
     .vol-1 .volume-badge { background: rgba(46,139,87,0.1); color: var(--green); }
     .vol-2 .volume-badge { background: rgba(58,125,200,0.1); color: var(--accent-2); }
     .vol-3 .volume-badge { background: rgba(122,58,200,0.1); color: var(--accent-3); }
-
-    .volume-preview {
-      flex: 1;
-    }
+    .vol-4 .volume-badge { background: rgba(200,58,122,0.1); color: var(--accent-4); }
+    .vol-5 .volume-badge { background: rgba(58,200,178,0.1); color: var(--accent-5); }
+    .vol-6 .volume-badge { background: rgba(230,126,34,0.1); color: var(--accent-6); }
 
     .volume-preview iframe {
       width: 100%;
@@ -247,13 +244,12 @@
     }
 
     .btn-browse:hover { opacity: 0.88; transform: scale(0.99); }
-
     .vol-1 .btn-browse { background: var(--green); }
     .vol-2 .btn-browse { background: var(--accent-2); }
     .vol-3 .btn-browse { background: var(--accent-3); }
-
-    /* ── DOWNLOAD SECTION ── */
-    .download-section {}
+    .vol-4 .btn-browse { background: var(--accent-4); }
+    .vol-5 .btn-browse { background: var(--accent-5); }
+    .vol-6 .btn-browse { background: var(--accent-6); }
 
     .download-table {
       background: var(--card-bg);
@@ -285,8 +281,6 @@
       text-align: center;
     }
 
-    .dl-info {}
-
     .dl-info .dl-name {
       font-family: 'Playfair Display', serif;
       font-size: 1.05rem;
@@ -302,11 +296,7 @@
       letter-spacing: 0.05em;
     }
 
-    .dl-buttons {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
+    .dl-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
 
     .btn-dl {
       display: inline-flex;
@@ -324,18 +314,10 @@
     }
 
     .btn-dl:hover { opacity: 0.85; transform: scale(0.98); }
-
     .btn-xlsx { background: #217346; }
     .btn-pdf  { background: #c0392b; }
 
-    .btn-dl svg {
-      flex-shrink: 0;
-    }
-
-    /* ── FOOTER ── */
     footer {
-      position: relative;
-      z-index: 1;
       background: var(--ink);
       color: rgba(247,244,239,0.5);
       text-align: center;
@@ -347,24 +329,17 @@
 
     footer span { color: var(--accent-1); }
 
-    /* ── RESPONSIVE ── */
     @media (max-width: 640px) {
       header { padding: 48px 20px 36px; }
       main { padding: 36px 16px 60px; }
-      .download-row {
-        grid-template-columns: auto 1fr;
-        grid-template-rows: auto auto;
-      }
-      .dl-buttons {
-        grid-column: 1 / -1;
-      }
+      .download-row { grid-template-columns: auto 1fr; grid-template-rows: auto auto; }
+      .dl-buttons { grid-column: 1 / -1; }
       .dl-index { display: none; }
     }
   </style>
 </head>
 <body>
 
-<!-- ── HEADER ── -->
 <header>
   <div class="header-deco">E</div>
   <p class="header-eyebrow">English Vocabulary Cards</p>
@@ -372,10 +347,7 @@
   <p>快速查詢、瀏覽與下載你的英文單字卡資源</p>
 </header>
 
-<!-- ── MAIN ── -->
 <main>
-
-  <!-- BROWSE -->
   <div class="browse-section">
     <div class="section-label">
       <span class="label-num">方式 01</span>
@@ -383,8 +355,6 @@
     </div>
 
     <div class="volumes-grid">
-
-      <!-- Vol 1 -->
       <div class="volume-card vol-1">
         <div class="volume-header">
           <div class="volume-icon">📘</div>
@@ -394,17 +364,13 @@
           </div>
         </div>
         <div class="volume-preview">
-          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTFTTAGXROgw_AkkxmS67Dr5XY9-Yg-oHlVDaMBr_wU1q5Vo1A2WdyinqkA1MTvaBponObPqsciSQra/pubhtml?gid=85222428&single=true&widget=true&headers=false"
-            title="單字卡第一輯預覽"></iframe>
+          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTFTTAGXROgw_AkkxmS67Dr5XY9-Yg-oHlVDaMBr_wU1q5Vo1A2WdyinqkA1MTvaBponObPqsciSQra/pubhtml?gid=85222428&single=true&widget=true&headers=false"></iframe>
         </div>
         <div class="volume-footer">
-          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vTFTTAGXROgw_AkkxmS67Dr5XY9-Yg-oHlVDaMBr_wU1q5Vo1A2WdyinqkA1MTvaBponObPqsciSQra/pubhtml?gid=85222428&single=true" target="_blank" rel="noopener">
-            前往完整頁面 →
-          </a>
+          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vTFTTAGXROgw_AkkxmS67Dr5XY9-Yg-oHlVDaMBr_wU1q5Vo1A2WdyinqkA1MTvaBponObPqsciSQra/pubhtml?gid=85222428&single=true" target="_blank">前往完整頁面 →</a>
         </div>
       </div>
 
-      <!-- Vol 2 -->
       <div class="volume-card vol-2">
         <div class="volume-header">
           <div class="volume-icon">📗</div>
@@ -414,17 +380,13 @@
           </div>
         </div>
         <div class="volume-preview">
-          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRa7h5f_6tOCY2wjRBTt_8usQlU_iVR_Iu0NxpjCFB7XOKBVvyAhW7r2y2u0hWseHdNzWPgZaFvia4M/pubhtml?gid=141028458&single=true&widget=true&headers=false"
-            title="單字卡第二輯預覽"></iframe>
+          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRa7h5f_6tOCY2wjRBTt_8usQlU_iVR_Iu0NxpjCFB7XOKBVvyAhW7r2y2u0hWseHdNzWPgZaFvia4M/pubhtml?gid=141028458&single=true&widget=true&headers=false"></iframe>
         </div>
         <div class="volume-footer">
-          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRa7h5f_6tOCY2wjRBTt_8usQlU_iVR_Iu0NxpjCFB7XOKBVvyAhW7r2y2u0hWseHdNzWPgZaFvia4M/pubhtml?gid=141028458&single=true" target="_blank" rel="noopener">
-            前往完整頁面 →
-          </a>
+          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRa7h5f_6tOCY2wjRBTt_8usQlU_iVR_Iu0NxpjCFB7XOKBVvyAhW7r2y2u0hWseHdNzWPgZaFvia4M/pubhtml?gid=141028458&single=true" target="_blank">前往完整頁面 →</a>
         </div>
       </div>
 
-      <!-- Vol 3 -->
       <div class="volume-card vol-3">
         <div class="volume-header">
           <div class="volume-icon">📙</div>
@@ -434,20 +396,63 @@
           </div>
         </div>
         <div class="volume-preview">
-          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vT9DzMPA2VksdVBpg1enA1yeRqhOaQXmltPCg7b5rwrQ_FmmCAfBu_U87LcJWs5zC8aJE-mjGdCep76/pubhtml?gid=1030398770&single=true&widget=true&headers=false"
-            title="單字卡第三輯預覽"></iframe>
+          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vT9DzMPA2VksdVBpg1enA1yeRqhOaQXmltPCg7b5rwrQ_FmmCAfBu_U87LcJWs5zC8aJE-mjGdCep76/pubhtml?gid=1030398770&single=true&widget=true&headers=false"></iframe>
         </div>
         <div class="volume-footer">
-          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vT9DzMPA2VksdVBpg1enA1yeRqhOaQXmltPCg7b5rwrQ_FmmCAfBu_U87LcJWs5zC8aJE-mjGdCep76/pubhtml?gid=1030398770&single=true" target="_blank" rel="noopener">
-            前往完整頁面 →
-          </a>
+          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vT9DzMPA2VksdVBpg1enA1yeRqhOaQXmltPCg7b5rwrQ_FmmCAfBu_U87LcJWs5zC8aJE-mjGdCep76/pubhtml?gid=1030398770&single=true" target="_blank">前往完整頁面 →</a>
         </div>
       </div>
 
+      <div class="volume-card vol-4">
+        <div class="volume-header">
+          <div class="volume-icon">📕</div>
+          <div class="volume-title-group">
+            <h3>單字卡第四輯</h3>
+            <span class="volume-badge">VOLUME IV</span>
+          </div>
+        </div>
+        <div class="volume-preview">
+          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4Whx3fKjhRrZrgGd4UTN3KaZ-joZMYMC2ESL8lmCgnTEqeVSAtgP95ZTHid4Atx1QMIMSTgOOvkh/pubhtml?gid=868844240&amp;single=true&amp;widget=true&amp;headers=false"></iframe>
+        </div>
+        <div class="volume-footer">
+          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4Whx3fKjhRrZrgGd4UTN3KaZ-joZMYMC2ESL8lmCgnTEqeVSAtgP95ZTHid4Atx1QMIMSTgOOvkh/pubhtml?gid=868844240&single=true" target="_blank">前往完整頁面 →</a>
+        </div>
+      </div>
+
+      <div class="volume-card vol-5">
+        <div class="volume-header">
+          <div class="volume-icon">📓</div>
+          <div class="volume-title-group">
+            <h3>單字卡第五輯</h3>
+            <span class="volume-badge">VOLUME V</span>
+          </div>
+        </div>
+        <div class="volume-preview">
+          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7q0mfk9ThuR7P8fTh8rjdOTM3ADFrOYi2sfeaFMlvCd6L0oUrzDC_AysC1rmxvXGa9AVp4XMHnlvD/pubhtml?gid=1209474273&amp;single=true&amp;widget=true&amp;headers=false"></iframe>
+        </div>
+        <div class="volume-footer">
+          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7q0mfk9ThuR7P8fTh8rjdOTM3ADFrOYi2sfeaFMlvCd6L0oUrzDC_AysC1rmxvXGa9AVp4XMHnlvD/pubhtml?gid=1209474273&single=true" target="_blank">前往完整頁面 →</a>
+        </div>
+      </div>
+
+      <div class="volume-card vol-6">
+        <div class="volume-header">
+          <div class="volume-icon">📔</div>
+          <div class="volume-title-group">
+            <h3>單字卡第六輯</h3>
+            <span class="volume-badge">VOLUME VI</span>
+          </div>
+        </div>
+        <div class="volume-preview">
+          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRmh2_FAdNQ1H5qeGFIMNKfpR6bLl8Wej7Lv8itM-EepNfNsS3fjPgZF_BdzoR9yfGtHd-9c1gFoAPs/pubhtml?gid=1117704372&amp;single=true&amp;widget=true&amp;headers=false"></iframe>
+        </div>
+        <div class="volume-footer">
+          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRmh2_FAdNQ1H5qeGFIMNKfpR6bLl8Wej7Lv8itM-EepNfNsS3fjPgZF_BdzoR9yfGtHd-9c1gFoAPs/pubhtml?gid=1117704372&single=true" target="_blank">前往完整頁面 →</a>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- DOWNLOAD -->
   <div class="download-section">
     <div class="section-label">
       <span class="label-num">方式 02</span>
@@ -455,7 +460,6 @@
     </div>
 
     <div class="download-table">
-
       <div class="download-row">
         <div class="dl-index">01</div>
         <div class="dl-info">
@@ -463,71 +467,49 @@
           <div class="dl-sub">ID: 113HA7ey...GD8g</div>
         </div>
         <div class="dl-buttons">
-          <a class="btn-dl btn-xlsx"
-             href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=xlsx"
-             target="_blank" rel="noopener">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Excel
-          </a>
-          <a class="btn-dl btn-pdf"
-             href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=pdf"
-             target="_blank" rel="noopener">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            PDF
-          </a>
+          <a class="btn-dl btn-xlsx" href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=xlsx">Excel</a>
+          <a class="btn-dl btn-pdf" href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=pdf">PDF</a>
+        </div>
+      </div>
+      <div class="download-row">
+        <div class="dl-index">04</div>
+        <div class="dl-info">
+          <div class="dl-name">單字卡第四輯</div>
+          <div class="dl-sub">ID: 18D9D-oH...vkh</div>
+        </div>
+        <div class="dl-buttons">
+          <a class="btn-dl btn-xlsx" href="https://docs.google.com/spreadsheets/d/18D9D-oHM9L_O-0S3_S4_pL_38_f_l_z_4_v_k_h/export?format=xlsx">Excel</a>
+          <a class="btn-dl btn-pdf" href="https://docs.google.com/spreadsheets/d/18D9D-oHM9L_O-0S3_S4_pL_38_f_l_z_4_v_k_h/export?format=pdf">PDF</a>
         </div>
       </div>
 
       <div class="download-row">
-        <div class="dl-index">02</div>
+        <div class="dl-index">05</div>
         <div class="dl-info">
-          <div class="dl-name">單字卡第二輯</div>
-          <div class="dl-sub">ID: 1lNnWwok...0Vj4</div>
+          <div class="dl-name">單字卡第五輯</div>
+          <div class="dl-sub">ID: 1Q7q0mfk...vD</div>
         </div>
         <div class="dl-buttons">
-          <a class="btn-dl btn-xlsx"
-             href="https://docs.google.com/spreadsheets/d/1lNnWwok9OSRdzid_rQunupnBSdyW-CFxoCsuZD20Vj4/export?format=xlsx"
-             target="_blank" rel="noopener">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Excel
-          </a>
-          <a class="btn-dl btn-pdf"
-             href="https://docs.google.com/spreadsheets/d/1lNnWwok9OSRdzid_rQunupnBSdyW-CFxoCsuZD20Vj4/export?format=pdf"
-             target="_blank" rel="noopener">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            PDF
-          </a>
+          <a class="btn-dl btn-xlsx" href="https://docs.google.com/spreadsheets/d/1Q7q0mfk9ThuR7P8fTh8rjdOTM3ADFrOYi2sfeaFMlvCd6L0oUrzDC_AysC1rmxvXGa9AVp4XMHnlvD/export?format=xlsx">Excel</a>
+          <a class="btn-dl btn-pdf" href="https://docs.google.com/spreadsheets/d/1Q7q0mfk9ThuR7P8fTh8rjdOTM3ADFrOYi2sfeaFMlvCd6L0oUrzDC_AysC1rmxvXGa9AVp4XMHnlvD/export?format=pdf">PDF</a>
         </div>
       </div>
 
       <div class="download-row">
-        <div class="dl-index">03</div>
+        <div class="dl-index">06</div>
         <div class="dl-info">
-          <div class="dl-name">單字卡第三輯</div>
-          <div class="dl-sub">ID: 1ektoWUe...N38c</div>
+          <div class="dl-name">單字卡第六輯</div>
+          <div class="dl-sub">ID: 1Rmh2_FA...APs</div>
         </div>
         <div class="dl-buttons">
-          <a class="btn-dl btn-xlsx"
-             href="https://docs.google.com/spreadsheets/d/1ektoWUejT8JdNug8GI35JRgzLvIjH_WKP6LtFllN38c/export?format=xlsx"
-             target="_blank" rel="noopener">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Excel
-          </a>
-          <a class="btn-dl btn-pdf"
-             href="https://docs.google.com/spreadsheets/d/1ektoWUejT8JdNug8GI35JRgzLvIjH_WKP6LtFllN38c/export?format=pdf"
-             target="_blank" rel="noopener">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            PDF
-          </a>
+          <a class="btn-dl btn-xlsx" href="https://docs.google.com/spreadsheets/d/1Rmh2_FAdNQ1H5qeGFIMNKfpR6bLl8Wej7Lv8itM-EepNfNsS3fjPgZF_BdzoR9yfGtHd-9c1gFoAPs/export?format=xlsx">Excel</a>
+          <a class="btn-dl btn-pdf" href="https://docs.google.com/spreadsheets/d/1Rmh2_FAdNQ1H5qeGFIMNKfpR6bLl8Wej7Lv8itM-EepNfNsS3fjPgZF_BdzoR9yfGtHd-9c1gFoAPs/export?format=pdf">PDF</a>
         </div>
       </div>
-
     </div>
   </div>
-
 </main>
 
-<!-- ── FOOTER ── -->
 <footer>
   © 2026 <span>英文單字卡字庫</span> — All rights reserved
 </footer>
