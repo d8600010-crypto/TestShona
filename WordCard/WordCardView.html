@@ -4,165 +4,532 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>英文單字卡字庫</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Noto+Serif+TC:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      margin: 0;
-      background: #f5f7fb;
-      color: #333;
+    :root {
+      --ink: #1a1a2e;
+      --paper: #f7f4ef;
+      --accent-1: #c8853a;
+      --accent-2: #3a7dc8;
+      --accent-3: #7a3ac8;
+      --green: #2e8b57;
+      --red: #c0392b;
+      --border: #d6cfc4;
+      --card-bg: #ffffff;
+      --shadow: 0 2px 16px rgba(26,26,46,0.09);
     }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Serif TC', Georgia, serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Subtle paper texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8853a' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
     header {
-      background: #2c5aa0;
+      position: relative;
+      background: var(--ink);
+      color: var(--paper);
+      padding: 64px 40px 48px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3));
+    }
+
+    .header-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent-1);
+      margin-bottom: 16px;
+      opacity: 0.9;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', 'Noto Serif TC', serif;
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    header h1 span {
+      color: var(--accent-1);
+    }
+
+    header p {
+      font-size: 1.05rem;
+      opacity: 0.7;
+      max-width: 480px;
+      margin: 0 auto;
+      font-weight: 400;
+    }
+
+    .header-deco {
+      position: absolute;
+      font-family: 'Playfair Display', serif;
+      font-size: 12rem;
+      font-weight: 900;
+      color: rgba(255,255,255,0.03);
+      top: -20px;
+      right: -20px;
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .section-label .label-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--accent-1);
+      background: rgba(200,133,58,0.1);
+      border: 1px solid rgba(200,133,58,0.25);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .section-label h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── BROWSE SECTION ── */
+    .browse-section {
+      margin-bottom: 64px;
+    }
+
+    .volumes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 28px;
+    }
+
+    .volume-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .volume-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(26,26,46,0.14);
+    }
+
+    .volume-header {
+      padding: 22px 24px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .volume-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .vol-1 .volume-icon { background: rgba(46,139,87,0.12); }
+    .vol-2 .volume-icon { background: rgba(58,125,200,0.12); }
+    .vol-3 .volume-icon { background: rgba(122,58,200,0.12); }
+
+    .volume-title-group h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .volume-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    .vol-1 .volume-badge { background: rgba(46,139,87,0.1); color: var(--green); }
+    .vol-2 .volume-badge { background: rgba(58,125,200,0.1); color: var(--accent-2); }
+    .vol-3 .volume-badge { background: rgba(122,58,200,0.1); color: var(--accent-3); }
+
+    .volume-preview {
+      flex: 1;
+    }
+
+    .volume-preview iframe {
+      width: 100%;
+      height: 340px;
+      border: none;
+      display: block;
+    }
+
+    .volume-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn-browse {
+      display: block;
+      width: 100%;
+      text-align: center;
+      padding: 11px 0;
+      border-radius: 8px;
+      font-family: 'Noto Serif TC', serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.15s;
+      letter-spacing: 0.03em;
       color: white;
-      padding: 20px;
+    }
+
+    .btn-browse:hover { opacity: 0.88; transform: scale(0.99); }
+
+    .vol-1 .btn-browse { background: var(--green); }
+    .vol-2 .btn-browse { background: var(--accent-2); }
+    .vol-3 .btn-browse { background: var(--accent-3); }
+
+    /* ── DOWNLOAD SECTION ── */
+    .download-section {}
+
+    .download-table {
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .download-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 20px;
+      padding: 22px 28px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .download-row:last-child { border-bottom: none; }
+    .download-row:hover { background: rgba(200,133,58,0.04); }
+
+    .dl-index {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.6rem;
+      font-weight: 500;
+      color: var(--border);
+      min-width: 36px;
       text-align: center;
     }
-    header h1 {
-      margin: 0;
-      font-size: 2.5em;
+
+    .dl-info {}
+
+    .dl-info .dl-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--ink);
     }
-    header p {
-      margin-top: 10px;
-      font-size: 1.1em;
+
+    .dl-info .dl-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: #999;
+      margin-top: 3px;
+      letter-spacing: 0.05em;
     }
-    .container {
-      max-width: 1100px;
-      margin: 40px auto;
-      padding: 20px;
-    }
-    .grid {
+
+    .dl-buttons {
       display: flex;
-      gap: 20px;
+      gap: 10px;
       flex-wrap: wrap;
     }
-    .card {
-      background: white;
-      flex: 1;
-      min-width: 300px;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-      text-align: center;
-    }
-    .card h2 {
-      color: #2c5aa0;
-    }
-    .btn {
-      display: inline-block;
-      margin-top: 15px;
-      padding: 12px 20px;
+
+    .btn-dl {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
       border-radius: 8px;
+      font-family: 'Noto Serif TC', serif;
+      font-size: 0.82rem;
+      font-weight: 600;
       text-decoration: none;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
       color: white;
     }
-    .btn-view {
-      background: #28a745;
+
+    .btn-dl:hover { opacity: 0.85; transform: scale(0.98); }
+
+    .btn-xlsx { background: #217346; }
+    .btn-pdf  { background: #c0392b; }
+
+    .btn-dl svg {
+      flex-shrink: 0;
     }
-    .btn-download {
-      background: #007bff;
-    }
-    iframe {
-      width: 100%;
-      height: 400px;
-      border: none;
-      margin-top: 20px;
-      border-radius: 10px;
-    }
+
+    /* ── FOOTER ── */
     footer {
+      position: relative;
+      z-index: 1;
+      background: var(--ink);
+      color: rgba(247,244,239,0.5);
       text-align: center;
-      padding: 20px;
-      margin-top: 40px;
-      background: #2c5aa0;
-      color: white;
+      padding: 28px 24px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+    }
+
+    footer span { color: var(--accent-1); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      header { padding: 48px 20px 36px; }
+      main { padding: 36px 16px 60px; }
+      .download-row {
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+      }
+      .dl-buttons {
+        grid-column: 1 / -1;
+      }
+      .dl-index { display: none; }
     }
   </style>
 </head>
 <body>
 
+<!-- ── HEADER ── -->
 <header>
-  <h1>英文單字卡字庫</h1>
-  <p>快速查詢、學習與下載你的英文單字卡</p>
+  <div class="header-deco">E</div>
+  <p class="header-eyebrow">English Vocabulary Cards</p>
+  <h1>英文<span>單字卡</span>字庫</h1>
+  <p>快速查詢、瀏覽與下載你的英文單字卡資源</p>
 </header>
 
-<div class="container">
+<!-- ── MAIN ── -->
+<main>
 
-  <div class="grid">
-
-    <!-- 線上瀏覽 -->
-    <div class="card">
-      <h2>方式一：線上瀏覽</h2>
-      <p>透過 Google 試算表直接查看完整單字卡內容</p>
-
-      <!-- 單字卡第一輯 -->
-      <h3 style="margin-top:15px;color:#28a745;">📘 單字卡第一輯</h3>
-      <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTFTTAGXROgw_AkkxmS67Dr5XY9-Yg-oHlVDaMBr_wU1q5Vo1A2WdyinqkA1MTvaBponObPqsciSQra/pubhtml?gid=85222428&amp;single=true&amp;widget=true&amp;headers=false"></iframe>
-
-      <a class="btn btn-view" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vTFTTAGXROgw_AkkxmS67Dr5XY9-Yg-oHlVDaMBr_wU1q5Vo1A2WdyinqkA1MTvaBponObPqsciSQra/pubhtml?gid=85222428&single=true" target="_blank">
-        前往第一輯完整頁面
-      </a>
-
-      <!-- 單字卡第二輯 -->
-      <h3 style="margin-top:25px;color:#007bff;">📗 單字卡第二輯</h3>
-      <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRa7h5f_6tOCY2wjRBTt_8usQlU_iVR_Iu0NxpjCFB7XOKBVvyAhW7r2y2u0hWseHdNzWPgZaFvia4M/pubhtml?gid=141028458&amp;single=true&amp;widget=true&amp;headers=false"></iframe>
-
-      <a class="btn btn-view" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRa7h5f_6tOCY2wjRBTt_8usQlU_iVR_Iu0NxpjCFB7XOKBVvyAhW7r2y2u0hWseHdNzWPgZaFvia4M/pubhtml?gid=141028458&single=true" target="_blank">
-        前往第二輯完整頁面
-      </a>
-
-      <!-- 單字卡第三輯 -->
-      <h3 style="margin-top:25px;color:#6f42c1;">📙 單字卡第三輯</h3>
-      <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vT9DzMPA2VksdVBpg1enA1yeRqhOaQXmltPCg7b5rwrQ_FmmCAfBu_U87LcJWs5zC8aJE-mjGdCep76/pubhtml?gid=1030398770&amp;single=true&amp;widget=true&amp;headers=false"></iframe>
-
-      <a class="btn btn-view" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vT9DzMPA2VksdVBpg1enA1yeRqhOaQXmltPCg7b5rwrQ_FmmCAfBu_U87LcJWs5zC8aJE-mjGdCep76/pubhtml?gid=1030398770&single=true" target="_blank">
-        前往第三輯完整頁面
-      </a>
+  <!-- BROWSE -->
+  <div class="browse-section">
+    <div class="section-label">
+      <span class="label-num">方式 01</span>
+      <h2>線上瀏覽</h2>
     </div>
 
-      <meta charset="UTF-8">
-    <title>方式二：Google Drive 檔案下載</title>
-    <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
-        .download-container { margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
-        .btn {
-            display: inline-block;
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 5px;
-            margin-right: 10px;
-        }
-        .btn:hover { background-color: #45a049; }
-        .btn-pdf { background-color: #f44336; }
-        .btn-pdf:hover { background-color: #da190b; }
-    </style>
-</head>
-<body>
+    <div class="volumes-grid">
 
-    <h1>檔案下載列表</h1>
+      <!-- Vol 1 -->
+      <div class="volume-card vol-1">
+        <div class="volume-header">
+          <div class="volume-icon">📘</div>
+          <div class="volume-title-group">
+            <h3>單字卡第一輯</h3>
+            <span class="volume-badge">VOLUME I</span>
+          </div>
+        </div>
+        <div class="volume-preview">
+          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTFTTAGXROgw_AkkxmS67Dr5XY9-Yg-oHlVDaMBr_wU1q5Vo1A2WdyinqkA1MTvaBponObPqsciSQra/pubhtml?gid=85222428&single=true&widget=true&headers=false"
+            title="單字卡第一輯預覽"></iframe>
+        </div>
+        <div class="volume-footer">
+          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vTFTTAGXROgw_AkkxmS67Dr5XY9-Yg-oHlVDaMBr_wU1q5Vo1A2WdyinqkA1MTvaBponObPqsciSQra/pubhtml?gid=85222428&single=true" target="_blank" rel="noopener">
+            前往完整頁面 →
+          </a>
+        </div>
+      </div>
 
-    <div class="download-container">
-        <h3>檔案 1 (ID: 113HA...GD8g)</h3>
-        <a class="btn" href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=xlsx">下載 Excel (.xlsx)</a>
-        <a class="btn btn-pdf" href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=pdf">下載 PDF</a>
+      <!-- Vol 2 -->
+      <div class="volume-card vol-2">
+        <div class="volume-header">
+          <div class="volume-icon">📗</div>
+          <div class="volume-title-group">
+            <h3>單字卡第二輯</h3>
+            <span class="volume-badge">VOLUME II</span>
+          </div>
+        </div>
+        <div class="volume-preview">
+          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRa7h5f_6tOCY2wjRBTt_8usQlU_iVR_Iu0NxpjCFB7XOKBVvyAhW7r2y2u0hWseHdNzWPgZaFvia4M/pubhtml?gid=141028458&single=true&widget=true&headers=false"
+            title="單字卡第二輯預覽"></iframe>
+        </div>
+        <div class="volume-footer">
+          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRa7h5f_6tOCY2wjRBTt_8usQlU_iVR_Iu0NxpjCFB7XOKBVvyAhW7r2y2u0hWseHdNzWPgZaFvia4M/pubhtml?gid=141028458&single=true" target="_blank" rel="noopener">
+            前往完整頁面 →
+          </a>
+        </div>
+      </div>
+
+      <!-- Vol 3 -->
+      <div class="volume-card vol-3">
+        <div class="volume-header">
+          <div class="volume-icon">📙</div>
+          <div class="volume-title-group">
+            <h3>單字卡第三輯</h3>
+            <span class="volume-badge">VOLUME III</span>
+          </div>
+        </div>
+        <div class="volume-preview">
+          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vT9DzMPA2VksdVBpg1enA1yeRqhOaQXmltPCg7b5rwrQ_FmmCAfBu_U87LcJWs5zC8aJE-mjGdCep76/pubhtml?gid=1030398770&single=true&widget=true&headers=false"
+            title="單字卡第三輯預覽"></iframe>
+        </div>
+        <div class="volume-footer">
+          <a class="btn-browse" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vT9DzMPA2VksdVBpg1enA1yeRqhOaQXmltPCg7b5rwrQ_FmmCAfBu_U87LcJWs5zC8aJE-mjGdCep76/pubhtml?gid=1030398770&single=true" target="_blank" rel="noopener">
+            前往完整頁面 →
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DOWNLOAD -->
+  <div class="download-section">
+    <div class="section-label">
+      <span class="label-num">方式 02</span>
+      <h2>下載檔案</h2>
     </div>
 
-    <div class="download-container">
-        <h3>檔案 2 (ID: 1lNnW...0Vj4)</h3>
-        <a class="btn" href="https://docs.google.com/spreadsheets/d/1lNnWwok9OSRdzid_rQunupnBSdyW-CFxoCsuZD20Vj4/export?format=xlsx">下載 Excel (.xlsx)</a>
-        <a class="btn btn-pdf" href="https://docs.google.com/spreadsheets/d/1lNnWwok9OSRdzid_rQunupnBSdyW-CFxoCsuZD20Vj4/export?format=pdf">下載 PDF</a>
-    </div>
+    <div class="download-table">
 
-    <div class="download-container">
-        <h3>檔案 3 (ID: 1ekto...38c)</h3>
-        <a class="btn" href="https://docs.google.com/spreadsheets/d/1ektoWUejT8JdNug8GI35JRgzLvIjH_WKP6LtFllN38c/export?format=xlsx">下載 Excel (.xlsx)</a>
-        <a class="btn btn-pdf" href="https://docs.google.com/spreadsheets/d/1ektoWUejT8JdNug8GI35JRgzLvIjH_WKP6LtFllN38c/export?format=pdf">下載 PDF</a>
-    </div>
+      <div class="download-row">
+        <div class="dl-index">01</div>
+        <div class="dl-info">
+          <div class="dl-name">單字卡第一輯</div>
+          <div class="dl-sub">ID: 113HA7ey...GD8g</div>
+        </div>
+        <div class="dl-buttons">
+          <a class="btn-dl btn-xlsx"
+             href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=xlsx"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Excel
+          </a>
+          <a class="btn-dl btn-pdf"
+             href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=pdf"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            PDF
+          </a>
+        </div>
+      </div>
 
-</body>
-</html>
+      <div class="download-row">
+        <div class="dl-index">02</div>
+        <div class="dl-info">
+          <div class="dl-name">單字卡第二輯</div>
+          <div class="dl-sub">ID: 1lNnWwok...0Vj4</div>
+        </div>
+        <div class="dl-buttons">
+          <a class="btn-dl btn-xlsx"
+             href="https://docs.google.com/spreadsheets/d/1lNnWwok9OSRdzid_rQunupnBSdyW-CFxoCsuZD20Vj4/export?format=xlsx"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Excel
+          </a>
+          <a class="btn-dl btn-pdf"
+             href="https://docs.google.com/spreadsheets/d/1lNnWwok9OSRdzid_rQunupnBSdyW-CFxoCsuZD20Vj4/export?format=pdf"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            PDF
+          </a>
+        </div>
+      </div>
+
+      <div class="download-row">
+        <div class="dl-index">03</div>
+        <div class="dl-info">
+          <div class="dl-name">單字卡第三輯</div>
+          <div class="dl-sub">ID: 1ektoWUe...N38c</div>
+        </div>
+        <div class="dl-buttons">
+          <a class="btn-dl btn-xlsx"
+             href="https://docs.google.com/spreadsheets/d/1ektoWUejT8JdNug8GI35JRgzLvIjH_WKP6LtFllN38c/export?format=xlsx"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Excel
+          </a>
+          <a class="btn-dl btn-pdf"
+             href="https://docs.google.com/spreadsheets/d/1ektoWUejT8JdNug8GI35JRgzLvIjH_WKP6LtFllN38c/export?format=pdf"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            PDF
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- ── FOOTER ── -->
 <footer>
-  <p>© 2026 英文單字卡字庫</p>
+  © 2026 <span>英文單字卡字庫</span> — All rights reserved
 </footer>
 
 </body>
