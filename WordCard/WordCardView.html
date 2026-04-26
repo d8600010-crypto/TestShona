@@ -12,9 +12,9 @@
       --accent-1: #c8853a;
       --accent-2: #3a7dc8;
       --accent-3: #7a3ac8;
-      --accent-4: #c83a7a; /* 新增顏色 */
-      --accent-5: #3ac8b2; /* 新增顏色 */
-      --accent-6: #e67e22; /* 新增顏色 */
+      --accent-4: #c83a7a;
+      --accent-5: #3ac8b2;
+      --accent-6: #e67e22;
       --green: #2e8b57;
       --red: #c0392b;
       --border: #d6cfc4;
@@ -184,7 +184,6 @@
       flex-shrink: 0;
     }
 
-    /* 輯數顏色分配 */
     .vol-1 .volume-icon { background: rgba(46,139,87,0.12); }
     .vol-2 .volume-icon { background: rgba(58,125,200,0.12); }
     .vol-3 .volume-icon { background: rgba(122,58,200,0.12); }
@@ -314,7 +313,7 @@
     }
 
     .btn-dl:hover { opacity: 0.85; transform: scale(0.98); }
-    .btn-xlsx { background: #217346; }
+    .btn-csv  { background: #1a7a4a; }
     .btn-pdf  { background: #c0392b; }
 
     footer {
@@ -458,12 +457,6 @@
       <span class="label-num">方式 02</span>
       <h2>下載檔案</h2>
     </div>
- <!-- DOWNLOAD -->
-  <div class="download-section">
-    <div class="section-label">
-      <span class="label-num">方式 02</span>
-      <h2>下載檔案</h2>
-    </div>
 
     <div class="download-table">
 
@@ -474,11 +467,11 @@
           <div class="dl-sub">ID: 113HA7ey...GD8g</div>
         </div>
         <div class="dl-buttons">
-          <a class="btn-dl btn-xlsx"
-             href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=xlsx"
+          <a class="btn-dl btn-csv"
+             href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=csv"
              target="_blank" rel="noopener">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Excel
+            CSV
           </a>
           <a class="btn-dl btn-pdf"
              href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=pdf"
@@ -496,11 +489,11 @@
           <div class="dl-sub">ID: 1lNnWwok...0Vj4</div>
         </div>
         <div class="dl-buttons">
-          <a class="btn-dl btn-xlsx"
-             href="https://docs.google.com/spreadsheets/d/1lNnWwok9OSRdzid_rQunupnBSdyW-CFxoCsuZD20Vj4/export?format=xlsx"
+          <a class="btn-dl btn-csv"
+             href="https://docs.google.com/spreadsheets/d/1lNnWwok9OSRdzid_rQunupnBSdyW-CFxoCsuZD20Vj4/export?format=csv"
              target="_blank" rel="noopener">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Excel
+            CSV
           </a>
           <a class="btn-dl btn-pdf"
              href="https://docs.google.com/spreadsheets/d/1lNnWwok9OSRdzid_rQunupnBSdyW-CFxoCsuZD20Vj4/export?format=pdf"
@@ -518,11 +511,11 @@
           <div class="dl-sub">ID: 1ektoWUe...N38c</div>
         </div>
         <div class="dl-buttons">
-          <a class="btn-dl btn-xlsx"
-             href="https://docs.google.com/spreadsheets/d/1ektoWUejT8JdNug8GI35JRgzLvIjH_WKP6LtFllN38c/export?format=xlsx"
+          <a class="btn-dl btn-csv"
+             href="https://docs.google.com/spreadsheets/d/1ektoWUejT8JdNug8GI35JRgzLvIjH_WKP6LtFllN38c/export?format=csv"
              target="_blank" rel="noopener">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Excel
+            CSV
           </a>
           <a class="btn-dl btn-pdf"
              href="https://docs.google.com/spreadsheets/d/1ektoWUejT8JdNug8GI35JRgzLvIjH_WKP6LtFllN38c/export?format=pdf"
@@ -533,22 +526,6 @@
         </div>
       </div>
 
-    </div>
-  </div>
-
-
-    <div class="download-table">
-      <div class="download-row">
-        <div class="dl-index">01</div>
-        <div class="dl-info">
-          <div class="dl-name">單字卡第三輯</div>
-          <div class="dl-sub">ID: 113HA7ey...GD8g</div>
-        </div>
-        <div class="dl-buttons">
-          <a class="btn-dl btn-xlsx" href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=xlsx">Excel</a>
-          <a class="btn-dl btn-pdf" href="https://docs.google.com/spreadsheets/d/113HA7eyG3oQMF8dUO7dLKzjFV0EFYV1wA3CNfIWGD8g/export?format=pdf">PDF</a>
-        </div>
-      </div>
       <div class="download-row">
         <div class="dl-index">04</div>
         <div class="dl-info">
@@ -556,8 +533,18 @@
           <div class="dl-sub">ID: 18D9D-oH...vkh</div>
         </div>
         <div class="dl-buttons">
-          <a class="btn-dl btn-xlsx" href="https://docs.google.com/spreadsheets/d/18D9D-oHM9L_O-0S3_S4_pL_38_f_l_z_4_v_k_h/export?format=xlsx">Excel</a>
-          <a class="btn-dl btn-pdf" href="https://docs.google.com/spreadsheets/d/18D9D-oHM9L_O-0S3_S4_pL_38_f_l_z_4_v_k_h/export?format=pdf">PDF</a>
+          <a class="btn-dl btn-csv"
+             href="https://docs.google.com/spreadsheets/d/18D9D-oHM9L_O-0S3_S4_pL_38_f_l_z_4_v_k_h/export?format=csv"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            CSV
+          </a>
+          <a class="btn-dl btn-pdf"
+             href="https://docs.google.com/spreadsheets/d/18D9D-oHM9L_O-0S3_S4_pL_38_f_l_z_4_v_k_h/export?format=pdf"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            PDF
+          </a>
         </div>
       </div>
 
@@ -568,8 +555,18 @@
           <div class="dl-sub">ID: 1Q7q0mfk...vD</div>
         </div>
         <div class="dl-buttons">
-          <a class="btn-dl btn-xlsx" href="https://docs.google.com/spreadsheets/d/1Q7q0mfk9ThuR7P8fTh8rjdOTM3ADFrOYi2sfeaFMlvCd6L0oUrzDC_AysC1rmxvXGa9AVp4XMHnlvD/export?format=xlsx">Excel</a>
-          <a class="btn-dl btn-pdf" href="https://docs.google.com/spreadsheets/d/1Q7q0mfk9ThuR7P8fTh8rjdOTM3ADFrOYi2sfeaFMlvCd6L0oUrzDC_AysC1rmxvXGa9AVp4XMHnlvD/export?format=pdf">PDF</a>
+          <a class="btn-dl btn-csv"
+             href="https://docs.google.com/spreadsheets/d/1Q7q0mfk9ThuR7P8fTh8rjdOTM3ADFrOYi2sfeaFMlvCd6L0oUrzDC_AysC1rmxvXGa9AVp4XMHnlvD/export?format=csv"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            CSV
+          </a>
+          <a class="btn-dl btn-pdf"
+             href="https://docs.google.com/spreadsheets/d/1Q7q0mfk9ThuR7P8fTh8rjdOTM3ADFrOYi2sfeaFMlvCd6L0oUrzDC_AysC1rmxvXGa9AVp4XMHnlvD/export?format=pdf"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            PDF
+          </a>
         </div>
       </div>
 
@@ -580,10 +577,21 @@
           <div class="dl-sub">ID: 1Rmh2_FA...APs</div>
         </div>
         <div class="dl-buttons">
-          <a class="btn-dl btn-xlsx" href="https://docs.google.com/spreadsheets/d/1Rmh2_FAdNQ1H5qeGFIMNKfpR6bLl8Wej7Lv8itM-EepNfNsS3fjPgZF_BdzoR9yfGtHd-9c1gFoAPs/export?format=xlsx">Excel</a>
-          <a class="btn-dl btn-pdf" href="https://docs.google.com/spreadsheets/d/1Rmh2_FAdNQ1H5qeGFIMNKfpR6bLl8Wej7Lv8itM-EepNfNsS3fjPgZF_BdzoR9yfGtHd-9c1gFoAPs/export?format=pdf">PDF</a>
+          <a class="btn-dl btn-csv"
+             href="https://docs.google.com/spreadsheets/d/1Rmh2_FAdNQ1H5qeGFIMNKfpR6bLl8Wej7Lv8itM-EepNfNsS3fjPgZF_BdzoR9yfGtHd-9c1gFoAPs/export?format=csv"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            CSV
+          </a>
+          <a class="btn-dl btn-pdf"
+             href="https://docs.google.com/spreadsheets/d/1Rmh2_FAdNQ1H5qeGFIMNKfpR6bLl8Wej7Lv8itM-EepNfNsS3fjPgZF_BdzoR9yfGtHd-9c1gFoAPs/export?format=pdf"
+             target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            PDF
+          </a>
         </div>
       </div>
+
     </div>
   </div>
 </main>
